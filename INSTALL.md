@@ -78,31 +78,27 @@ run_sddmm
 test_sddmm
 ```
 
-## Step 5 — Build and link the Tracy host tools
+## Step 5 — Link the Tracy host tools
 
-> ⚠️ **Not yet verified end-to-end — this section is a TODO.**
->
-> The profile/export binaries invoke `./capture-release` and
-> `./csvexport-release` (Tracy's host-side tools). `build_metal.sh` does
-> **not** build these by default — they live under
-> `tt_metal/third_party/tracy/capture/` and
-> `tt_metal/third_party/tracy/csvexport/` and must be built manually out of
-> their own CMakeLists/Makefiles.
->
-> Once built, they need to be reachable from `$TT_METAL_HOME` as
-> `./capture-release` and `./csvexport-release` (typically via symlink into
-> the tt-metal root).
->
-> This artifact will ship:
-> - `host_integration/build_tracy_host_tools.sh` — builds the Tracy tools
->   from source
-> - `host_integration/setup_tracy_symlinks.sh` — links them into
->   `$TT_METAL_HOME`
->
-> Both scripts will be finalized after a fresh-machine dry-run validates
-> the exact commands. For now you must follow Tracy's upstream build docs
-> inside those subdirectories and symlink the results into `$TT_METAL_HOME`
-> manually.
+`build_metal.sh --enable-profiler` (Step 4) already built the Tracy
+host-side tools (`capture-release` and `csvexport-release`) under
+`tt_metal/third_party/tracy/{capture,csvexport}/build/unix/`. The
+profile/export binaries invoke them via relative paths (`./capture-release`,
+`./csvexport-release`), so they must be reachable from `$TT_METAL_HOME`.
+
+Run the supplied helper to create the symlinks:
+
+```bash
+bash tt_metal/programming_examples/Tenstorrent-WH-BlockSpMM/host_integration/setup_tracy_symlinks.sh
+```
+
+Idempotent — safe to re-run. Output:
+
+```
+[linked]  capture-release -> tt_metal/third_party/tracy/capture/build/unix/capture-release
+[linked]  csvexport-release -> tt_metal/third_party/tracy/csvexport/build/unix/csvexport-release
+Tracy symlinks ready at $TT_METAL_HOME.
+```
 
 ## Step 6 — Install Python dependencies
 
