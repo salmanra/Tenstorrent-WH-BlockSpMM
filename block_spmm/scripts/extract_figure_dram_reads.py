@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Extract DRAM-read test cases from the four dram_reads CSVs that correspond
-to bars in the seven SC26 submission figures.
+to bars in the seven BlockSpMM submission figures.
 
 Outputs one row per unique (group, registry, test, host_code) — i.e. one row
 per bar — with total in0_reads and in1_reads summed across all cores.
@@ -20,12 +20,12 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 
 # ── Source CSV paths ──
 DRAM_CSVS = {
-    "load_imbalance":        SCRIPT_DIR / "dram_reads_load_imbalance.csv",
-    "load_imbalance_upper":  SCRIPT_DIR / "dram_reads_load_imbalance_upper.csv",
+    "load_imbalance": SCRIPT_DIR / "dram_reads_load_imbalance.csv",
+    "load_imbalance_upper": SCRIPT_DIR / "dram_reads_load_imbalance_upper.csv",
     "load_imbalance_random": SCRIPT_DIR / "dram_reads_load_imbalance_random.csv",
     "multi_diag_ultra_sparse": SCRIPT_DIR / "dram_reads_multi_diag_ultra_sparse.csv",
-    "mixed_sweep":           SCRIPT_DIR / "dram_reads_mixed_sweep.csv",
-    "sweep_pattern":         SCRIPT_DIR / "dram_reads_sweep_pattern.csv",
+    "mixed_sweep": SCRIPT_DIR / "dram_reads_mixed_sweep.csv",
+    "sweep_pattern": SCRIPT_DIR / "dram_reads_sweep_pattern.csv",
 }
 
 # ── Figure definitions ──
@@ -37,56 +37,79 @@ FIGURES = {
     "load_imbalance": [
         ("load_imbalance", {"registry": "29", "host_code": ["CDA", "CDA_no_lb"]}),
     ],
-
     # Fig 2: load_imbalance_upper.png — DDA ± LB, upper-triangular, both sizes
     "load_imbalance_upper": [
         ("load_imbalance_upper", {"registry": "30", "host_code": ["CDA", "CDA_no_lb"]}),
     ],
-
     # Fig 3: load_imbalance_comparison.png — Naive/SnF/DDA (LB only), both triangles
     "load_imbalance_comparison": [
-        ("load_imbalance",       {"registry": "29", "host_code": ["Naive", "SnF", "CDA"]}),
+        ("load_imbalance", {"registry": "29", "host_code": ["Naive", "SnF", "CDA"]}),
         ("load_imbalance_upper", {"registry": "30", "host_code": ["Naive", "SnF", "CDA"]}),
     ],
-
     # Fig 4: mixed_sweep_d50.png — 3 algos, PatternD50, row + multi_diag
     "mixed_sweep_d50": [
-        ("mixed_sweep", {"registry": "5", "host_code": [
-            "Naive_row_R256_d50", "SnF_row_R256_d50", "CDA_row_R256_d50",
-            "Naive_multi_diag_R256_d50", "SnF_multi_diag_R256_d50", "CDA_multi_diag_R256_d50",
-        ]}),
+        (
+            "mixed_sweep",
+            {
+                "registry": "5",
+                "host_code": [
+                    "Naive_row_R256_d50",
+                    "SnF_row_R256_d50",
+                    "CDA_row_R256_d50",
+                    "Naive_multi_diag_R256_d50",
+                    "SnF_multi_diag_R256_d50",
+                    "CDA_multi_diag_R256_d50",
+                ],
+            },
+        ),
     ],
-
     # Fig 5: mixed_sweep_d06.png — 3 algos, PatternUltra64_6000, row + random
     "mixed_sweep_d06": [
-        ("mixed_sweep", {"registry": "27", "host_code": [
-            "Naive_row_R64_d0.6", "SnF_row_R64_d0.6", "CDA_row_R64_d0.6",
-            "Naive_random_R64_d0.6", "SnF_random_R64_d0.6", "CDA_random_R64_d0.6",
-        ]}),
+        (
+            "mixed_sweep",
+            {
+                "registry": "27",
+                "host_code": [
+                    "Naive_row_R64_d0.6",
+                    "SnF_row_R64_d0.6",
+                    "CDA_row_R64_d0.6",
+                    "Naive_random_R64_d0.6",
+                    "SnF_random_R64_d0.6",
+                    "CDA_random_R64_d0.6",
+                ],
+            },
+        ),
     ],
-
     # Fig 8: load_imbalance_random.png — LB vs no-LB, random 25%, all 3 algos
     "load_imbalance_random": [
-        ("load_imbalance_random", {"registry": "4", "host_code": [
-            "Naive", "Naive_no_lb", "SnF", "SnF_no_lb", "CDA", "CDA_no_lb",
-        ]}),
+        (
+            "load_imbalance_random",
+            {
+                "registry": "4",
+                "host_code": [
+                    "Naive",
+                    "Naive_no_lb",
+                    "SnF",
+                    "SnF_no_lb",
+                    "CDA",
+                    "CDA_no_lb",
+                ],
+            },
+        ),
     ],
-
     # Fig 9: multi_diag_ultra_sparse.png — 3 algos, multi_diag, R=C=64, d=0.6%
     "multi_diag_ultra_sparse": [
         ("multi_diag_ultra_sparse", {"registry": "27", "host_code": ["Naive", "SnF", "CDA"]}),
     ],
-
     # Fig 6: sweep_pattern_dda_vs_gpu_ultrasparse.png — CDA only, R=C=32 and R=C=64
     "sweep_pattern_ultrasparse": [
-        ("sweep_pattern", {"registry": [str(r) for r in range(17, 22)]}),   # 32×32
-        ("sweep_pattern", {"registry": [str(r) for r in range(23, 29)]}),   # 64×64
+        ("sweep_pattern", {"registry": [str(r) for r in range(17, 22)]}),  # 32×32
+        ("sweep_pattern", {"registry": [str(r) for r in range(23, 29)]}),  # 64×64
     ],
-
     # Fig 7: sweep_pattern_dda_vs_gpu_standard.png — CDA only, R=C=128 and R=C=256
     "sweep_pattern_standard": [
-        ("sweep_pattern", {"registry": [str(r) for r in range(13, 17)]}),   # 128×128
-        ("sweep_pattern", {"registry": [str(r) for r in range(2, 6)]}),     # 256×256
+        ("sweep_pattern", {"registry": [str(r) for r in range(13, 17)]}),  # 128×128
+        ("sweep_pattern", {"registry": [str(r) for r in range(2, 6)]}),  # 256×256
     ],
 }
 
@@ -123,14 +146,16 @@ def aggregate_figure(specs, all_data):
 
     rows = []
     for (group, registry, test, host_code), totals in agg.items():
-        rows.append({
-            "group": group,
-            "registry": registry,
-            "test": test,
-            "host_code": host_code,
-            "total_in0_reads": totals["in0_reads"],
-            "total_in1_reads": totals["in1_reads"],
-        })
+        rows.append(
+            {
+                "group": group,
+                "registry": registry,
+                "test": test,
+                "host_code": host_code,
+                "total_in0_reads": totals["in0_reads"],
+                "total_in1_reads": totals["in1_reads"],
+            }
+        )
     return rows
 
 
@@ -138,10 +163,8 @@ FIELDNAMES = ["group", "registry", "test", "host_code", "total_in0_reads", "tota
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Extract per-bar DRAM read totals for each figure")
-    parser.add_argument("--out-dir", default=None,
-                        help="Write per-figure CSVs here (default: stdout)")
+    parser = argparse.ArgumentParser(description="Extract per-bar DRAM read totals for each figure")
+    parser.add_argument("--out-dir", default=None, help="Write per-figure CSVs here (default: stdout)")
     args = parser.parse_args()
 
     all_data = {}

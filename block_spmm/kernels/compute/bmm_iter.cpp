@@ -5,7 +5,7 @@ CK is neutral to order, but it's probably worth naming loop vars
 
 
 #include <tools/profiler/kernel_profiler.hpp>
-#include "tt_metal/programming_examples/rahmy/SC26_submission/block_spmm/kernels/common/spmm_profiling.hpp"
+#include "tt_metal/programming_examples/Tenstorrent-WH-BlockSpMM/block_spmm/kernels/common/spmm_profiling.hpp"
 
 // Compile-time profiling zone toggle (override to 0 via CreateKernel defines)
 #ifndef PROFILE_COMPUTE

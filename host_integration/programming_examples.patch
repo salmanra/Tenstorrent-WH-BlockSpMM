@@ -1,0 +1,20 @@
+Register Tenstorrent-WH-BlockSpMM with the host tt-metal build.
+
+Adds a single add_subdirectory() call to tt-metal's programming_examples
+CMakeLists.txt so the submodule's CMake participates in the parent build.
+
+Apply from $TT_METAL_HOME (the root of your tt-metal checkout) with:
+    patch -p1 < tt_metal/programming_examples/Tenstorrent-WH-BlockSpMM/host_integration/programming_examples.patch
+
+Baseline: tt-metal tag v0.63.0.
+
+--- a/tt_metal/programming_examples/CMakeLists.txt
++++ b/tt_metal/programming_examples/CMakeLists.txt
+@@ -8,6 +8,7 @@
+ add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/profiler)
+ add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/distributed)
+ add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/contributed)
++add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/Tenstorrent-WH-BlockSpMM)
+
+ add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/add_2_integers_in_compute)
+ add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/add_2_integers_in_riscv)

@@ -99,7 +99,12 @@ void capture_profile(int host_code_num, int test_num, ProfileCaseFunctionPtr *Re
     }
 
     char buf[1000];
-    size_t n = sprintf(buf, "/home/user/tt-metal/%s/bsr/%s/%s/", output_dir.c_str(), registry_name.c_str(), host_function_name.c_str());
+    const char* tt_metal_home = std::getenv("TT_METAL_HOME");
+    if (!tt_metal_home) {
+        std::cerr << "TT_METAL_HOME must be set" << std::endl;
+        std::exit(1);
+    }
+    size_t n = sprintf(buf, "%s/%s/bsr/%s/%s/", tt_metal_home, output_dir.c_str(), registry_name.c_str(), host_function_name.c_str());
     std::string trace_directory(buf, n);
     std::string trace_file_location = trace_directory + test_name + disabled_zones + ".tracy";
 

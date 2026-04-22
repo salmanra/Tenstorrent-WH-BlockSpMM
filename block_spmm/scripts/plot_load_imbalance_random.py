@@ -15,6 +15,7 @@ import sys
 from pathlib import Path
 
 import matplotlib
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
@@ -22,12 +23,9 @@ import numpy as np
 
 # (lb_dir, no_lb_dir, label)
 ALGORITHMS = [
-    ("bsr_spmm_multicore_load_balanced_new_DM",
-     "bsr_spmm_multicore_load_balanced_new_DM_no_lb", "Naive"),
-    ("bsr_spmm_multicore_snf",
-     "bsr_spmm_multicore_snf_no_lb", "SnF"),
-    ("bsr_spmm_multicore_snfin0_cdain1",
-     "bsr_spmm_multicore_snfin0_cdain1_no_lb", "DDA"),
+    ("bsr_spmm_multicore_load_balanced_new_DM", "bsr_spmm_multicore_load_balanced_new_DM_no_lb", "Naive"),
+    ("bsr_spmm_multicore_snf", "bsr_spmm_multicore_snf_no_lb", "SnF"),
+    ("bsr_spmm_multicore_snfin0_cdain1", "bsr_spmm_multicore_snfin0_cdain1_no_lb", "DDA"),
 ]
 
 REGISTRY = "PatternD25"
@@ -35,7 +33,7 @@ TEST_NAME = "parametric_M8192_N8192_K8192_R256_C256_dppm250000"
 HOST_LOOP_ITERATIONS = 10
 
 # Paired colors: solid for LB, lighter for no-LB
-COLORS_LB    = ["#4472C4", "#ED7D31", "#70AD47"]
+COLORS_LB = ["#4472C4", "#ED7D31", "#70AD47"]
 COLORS_NO_LB = ["#8FAADC", "#F4B183", "#A9D18E"]
 
 
@@ -53,11 +51,10 @@ def extract_host_ms(host_csv_path):
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Plot LB vs No-LB on random 25% density matrices (runtime ms)")
+    parser = argparse.ArgumentParser(description="Plot LB vs No-LB on random 25% density matrices (runtime ms)")
     parser.add_argument(
         "--data-dir",
-        default="/home/user/tt-metal/profiles_load_imbalance_random/csvs",
+        default="${TT_METAL_HOME}/profiles_load_imbalance_random/csvs",
         help="Root CSV directory",
     )
     args = parser.parse_args()
@@ -97,21 +94,25 @@ def main():
         ratios.append(no_lb_v / lb_v if lb_v > 0 else 0.0)
 
     fig2, ax2 = plt.subplots(figsize=(7, 5))
-    bars_r = ax2.bar(x, ratios, width=0.5, color=COLORS_LB,
-                     edgecolor="white", linewidth=0.5)
+    bars_r = ax2.bar(x, ratios, width=0.5, color=COLORS_LB, edgecolor="white", linewidth=0.5)
 
     for bar, ratio in zip(bars_r, ratios):
         if ratio > 0:
-            ax2.text(bar.get_x() + bar.get_width() / 2, ratio + 0.01,
-                     f"{ratio:.2f}x", ha="center", va="bottom",
-                     fontsize=11, fontweight="bold")
+            ax2.text(
+                bar.get_x() + bar.get_width() / 2,
+                ratio + 0.01,
+                f"{ratio:.2f}x",
+                ha="center",
+                va="bottom",
+                fontsize=11,
+                fontweight="bold",
+            )
 
     ax2.axhline(y=1.0, color="gray", linestyle="--", linewidth=1, label="No-LB baseline")
     ax2.set_xticks(x)
     ax2.set_xticklabels(algo_labels, fontsize=11)
     ax2.set_ylabel("Speedup (No-LB time / LB time)", fontsize=11)
-    ax2.set_title("LB Speedup over No-LB: Random 25% Density\n(M=N=K=8192, R=C=256)",
-                  fontsize=13, fontweight="bold")
+    ax2.set_title("LB Speedup over No-LB: Random 25% Density\n(M=N=K=8192, R=C=256)", fontsize=13, fontweight="bold")
     ax2.grid(axis="y", alpha=0.3)
     ax2.set_axisbelow(True)
     ax2.set_ylim(0, max(ratios) * 1.25 if max(ratios) > 0 else 1.5)

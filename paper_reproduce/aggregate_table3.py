@@ -8,22 +8,26 @@ K sweeps. Emits one row per test case with both algorithms and their speedup.
 
 import argparse
 import csv
+import os
 import re
 import sys
 from pathlib import Path
 
-SDDMM_DATA_DIR = Path("/home/user/tt-metal/sddmm_profiles/opt_noc/csvs")
+_TT_METAL_HOME = os.environ.get("TT_METAL_HOME")
+if not _TT_METAL_HOME:
+    sys.exit("TT_METAL_HOME must be set to your tt-metal checkout path")
+SDDMM_DATA_DIR = Path(_TT_METAL_HOME) / "sddmm_profiles" / "opt_noc" / "csvs"
 
 # (sweep label, registry dir)
 SWEEPS = [
     ("Density", "SDDMMSweepDensity"),
-    ("N",       "SDDMMSweepN"),
-    ("K",       "SDDMMSweepK"),
+    ("N", "SDDMMSweepN"),
+    ("K", "SDDMMSweepK"),
 ]
 
 ALGOS = [
     ("naive", "bsr_sddmm_multicore_naive"),
-    ("cda",   "bsr_sddmm_multicore_CDA"),
+    ("cda", "bsr_sddmm_multicore_CDA"),
 ]
 
 PARAMETRIC_RE = re.compile(r"parametric_M(\d+)_N(\d+)_K(\d+)_R(\d+)_C(\d+)_d(\d+)")
@@ -65,8 +69,7 @@ def collect_algo(algo_dir: Path) -> dict[tuple, dict]:
 
 def main():
     p = argparse.ArgumentParser(description="Aggregate Table 3 into a single CSV.")
-    p.add_argument("--data-dir", type=Path, default=SDDMM_DATA_DIR,
-                   help=f"SDDMM CSV root (default: {SDDMM_DATA_DIR})")
+    p.add_argument("--data-dir", type=Path, default=SDDMM_DATA_DIR, help=f"SDDMM CSV root (default: {SDDMM_DATA_DIR})")
     p.add_argument("--out-csv", type=Path, required=True)
     args = p.parse_args()
 
@@ -79,33 +82,50 @@ def main():
         for key in keys:
             M, N, K, R, C, density = key
             naive = algo_data["naive"].get(key, {})
-            cda   = algo_data["cda"].get(key, {})
+            cda = algo_data["cda"].get(key, {})
             n_tf = naive.get("tflops")
             c_tf = cda.get("tflops")
             if n_tf is None or c_tf is None:
                 missing += 1
             speedup = (c_tf / n_tf) if (n_tf and c_tf) else None
-            rows.append({
-                "sweep":        sweep_label,
-                "M": M, "N": N, "K": K, "R": R, "C": C,
-                "density":      density,
-                "nblocks":      naive.get("nblocks") or cda.get("nblocks"),
-                "naive_tflops": n_tf,
-                "cda_tflops":   c_tf,
-                "speedup":      speedup,
-            })
+            rows.append(
+                {
+                    "sweep": sweep_label,
+                    "M": M,
+                    "N": N,
+                    "K": K,
+                    "R": R,
+                    "C": C,
+                    "density": density,
+                    "nblocks": naive.get("nblocks") or cda.get("nblocks"),
+                    "naive_tflops": n_tf,
+                    "cda_tflops": c_tf,
+                    "speedup": speedup,
+                }
+            )
 
     args.out_csv.parent.mkdir(parents=True, exist_ok=True)
     with open(args.out_csv, "w", newline="") as f:
-        w = csv.DictWriter(f, fieldnames=[
-            "sweep", "M", "N", "K", "R", "C", "density", "nblocks",
-            "naive_tflops", "cda_tflops", "speedup",
-        ])
+        w = csv.DictWriter(
+            f,
+            fieldnames=[
+                "sweep",
+                "M",
+                "N",
+                "K",
+                "R",
+                "C",
+                "density",
+                "nblocks",
+                "naive_tflops",
+                "cda_tflops",
+                "speedup",
+            ],
+        )
         w.writeheader()
         w.writerows(rows)
 
-    print(f"Wrote {len(rows)} rows to {args.out_csv}" +
-          (f" ({missing} missing cells)" if missing else ""))
+    print(f"Wrote {len(rows)} rows to {args.out_csv}" + (f" ({missing} missing cells)" if missing else ""))
     sys.exit(0 if missing == 0 else 1)
 
 

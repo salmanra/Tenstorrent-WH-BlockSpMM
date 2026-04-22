@@ -1,4 +1,4 @@
-# SC26 Block SpMM Profiling Plan
+# BlockSpMM Block SpMM Profiling Plan
 
 Self-contained profiling project for 3 block SpMM algorithms on Tenstorrent Wormhole.
 

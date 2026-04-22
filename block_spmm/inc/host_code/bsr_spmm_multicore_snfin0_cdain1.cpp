@@ -494,7 +494,7 @@ void bsr_spmm_multicore_snfin0_cdain1_impl(
 
     auto compute_id = tt_metal::CreateKernel(
         program,
-        "tt_metal/programming_examples/rahmy/SC26_submission/block_spmm/kernels/compute/bmm_iter.cpp",
+        "tt_metal/programming_examples/Tenstorrent-WH-BlockSpMM/block_spmm/kernels/compute/bmm_iter.cpp",
         all_cores,
         tt_metal::ComputeConfig{
             .math_fidelity = math_fidelity,
@@ -505,8 +505,8 @@ void bsr_spmm_multicore_snfin0_cdain1_impl(
 
     // CDA in1 reader (replaces SNF in1 reader)
     std::string in1_kernel_path = in1_bottom_to_top
-        ? "tt_metal/programming_examples/rahmy/SC26_submission/block_spmm/kernels/dataflow/reader_in1_chain_of_direct_addressing.cpp"
-        : "tt_metal/programming_examples/rahmy/SC26_submission/block_spmm/kernels/dataflow/reader_in1_chain_of_direct_addressingV2.cpp";
+        ? "tt_metal/programming_examples/Tenstorrent-WH-BlockSpMM/block_spmm/kernels/dataflow/reader_in1_chain_of_direct_addressing.cpp"
+        : "tt_metal/programming_examples/Tenstorrent-WH-BlockSpMM/block_spmm/kernels/dataflow/reader_in1_chain_of_direct_addressingV2.cpp";
     auto in1_reader_id = tt_metal::CreateKernel(
         program,
         in1_kernel_path,
@@ -520,7 +520,7 @@ void bsr_spmm_multicore_snfin0_cdain1_impl(
     // SNF in0 reader (UNCHANGED from SNF version)
     auto in0_injector_and_writer_id = tt_metal::CreateKernel(
         program,
-        "tt_metal/programming_examples/rahmy/SC26_submission/block_spmm/kernels/dataflow/reader_snf_in0_reader.cpp",
+        "tt_metal/programming_examples/Tenstorrent-WH-BlockSpMM/block_spmm/kernels/dataflow/reader_snf_in0_reader.cpp",
         in0_injector_cores,
         tt_metal::DataMovementConfig{
             .processor = DataMovementProcessor::RISCV_0,
@@ -535,7 +535,7 @@ void bsr_spmm_multicore_snfin0_cdain1_impl(
         }
         in0_receiver_and_writer_id = tt_metal::CreateKernel(
             program,
-            "tt_metal/programming_examples/rahmy/SC26_submission/block_spmm/kernels/dataflow/reader_snf_in0_reader.cpp",
+            "tt_metal/programming_examples/Tenstorrent-WH-BlockSpMM/block_spmm/kernels/dataflow/reader_snf_in0_reader.cpp",
             in0_receiver_cores,
             tt_metal::DataMovementConfig{
                 .processor = DataMovementProcessor::RISCV_0,

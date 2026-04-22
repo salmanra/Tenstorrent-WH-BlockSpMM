@@ -344,7 +344,7 @@ void bsr_sddmm_multicore_CDA_impl(
     // Yes, transpose the NoC!
     auto bc_reader_id = tt_metal::CreateKernel(
         program,
-        "tt_metal/programming_examples/rahmy/SC26_submission/block_sddmm/kernels/dataflow/data_movement_sddmm_BC_CDA.cpp",
+        "tt_metal/programming_examples/Tenstorrent-WH-BlockSpMM/block_sddmm/kernels/dataflow/data_movement_sddmm_BC_CDA.cpp",
         all_cores,
         tt_metal::DataMovementConfig{
             .processor = DataMovementProcessor::RISCV_0,
@@ -354,7 +354,7 @@ void bsr_sddmm_multicore_CDA_impl(
 
     auto d_writer_id = tt_metal::CreateKernel(
         program,
-        "tt_metal/programming_examples/rahmy/SC26_submission/block_sddmm/kernels/dataflow/data_movement_sddmm_D_CDA_out.cpp",
+        "tt_metal/programming_examples/Tenstorrent-WH-BlockSpMM/block_sddmm/kernels/dataflow/data_movement_sddmm_D_CDA_out.cpp",
         all_cores,
         tt_metal::DataMovementConfig{
             .processor = DataMovementProcessor::RISCV_1,
@@ -364,7 +364,7 @@ void bsr_sddmm_multicore_CDA_impl(
 
     auto compute_id = tt_metal::CreateKernel(
         program,
-        "tt_metal/programming_examples/rahmy/SC26_submission/block_sddmm/kernels/compute/sddmm_block_multiply.cpp",
+        "tt_metal/programming_examples/Tenstorrent-WH-BlockSpMM/block_sddmm/kernels/compute/sddmm_block_multiply.cpp",
         all_cores,
         tt_metal::ComputeConfig{
             .math_fidelity = math_fidelity,

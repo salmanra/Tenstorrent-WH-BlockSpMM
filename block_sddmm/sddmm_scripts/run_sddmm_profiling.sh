@@ -1,8 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-REPO_ROOT="/home/user/tt-metal"
-BUILD_DIR="${REPO_ROOT}/build/programming_examples/rahmy"
+REPO_ROOT="${TT_METAL_HOME:?TT_METAL_HOME must be set — set it to your tt-metal checkout path}"
+
+# capture-release/csvexport-release are resolved relative to CWD
+cd "$REPO_ROOT"
+BUILD_DIR="${REPO_ROOT}/build/programming_examples/block_sparse"
 
 # Defaults
 DO_BUILD=true

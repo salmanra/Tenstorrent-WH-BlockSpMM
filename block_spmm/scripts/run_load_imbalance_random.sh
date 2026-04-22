@@ -14,8 +14,11 @@ set -euo pipefail
 # 6 runs total (6 host codes x 1 test case).
 ###############################################################################
 
-REPO_ROOT="/home/user/tt-metal"
-BUILD_DIR="${REPO_ROOT}/build_Release_tracy/programming_examples/rahmy"
+REPO_ROOT="${TT_METAL_HOME:?TT_METAL_HOME must be set — set it to your tt-metal checkout path}"
+
+# capture-release/csvexport-release are resolved relative to CWD
+cd "$REPO_ROOT"
+BUILD_DIR="${REPO_ROOT}/build_Release_tracy/programming_examples/block_sparse"
 PROFILE_BIN="${BUILD_DIR}/profile_block_spmm"
 EXPORT_BIN="${BUILD_DIR}/export_block_spmm_to_csv"
 

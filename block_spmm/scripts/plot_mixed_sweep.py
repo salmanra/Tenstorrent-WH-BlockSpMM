@@ -16,6 +16,7 @@ import sys
 from pathlib import Path
 
 import matplotlib
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
@@ -72,7 +73,7 @@ def main():
     parser = argparse.ArgumentParser(description="Plot mixed-sweep throughput bar charts")
     parser.add_argument(
         "--data-dir",
-        default="/home/user/tt-metal/profiles_mixed_sweep/csvs",
+        default="${TT_METAL_HOME}/profiles_mixed_sweep/csvs",
         help="Root directory containing registry/host_code/ CSV files",
     )
     args = parser.parse_args()
@@ -125,7 +126,10 @@ def main():
                         bar.get_x() + bar.get_width() / 2,
                         bar.get_height() + 0.3,
                         f"{val:.1f}",
-                        ha="center", va="bottom", fontsize=9, fontweight="bold",
+                        ha="center",
+                        va="bottom",
+                        fontsize=9,
+                        fontweight="bold",
                     )
 
             ax.set_xticks(x)

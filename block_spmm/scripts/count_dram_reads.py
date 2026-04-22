@@ -22,18 +22,21 @@ import sys
 from collections import defaultdict
 from pathlib import Path
 
-REPO_ROOT = Path("/home/user/tt-metal")
-RUN_BIN = REPO_ROOT / "build" / "programming_examples" / "rahmy" / "run_block_spmm"
+_TT_METAL_HOME = os.environ.get("TT_METAL_HOME")
+if not _TT_METAL_HOME:
+    sys.exit("TT_METAL_HOME must be set to your tt-metal checkout path")
+REPO_ROOT = Path(_TT_METAL_HOME)
+RUN_BIN = REPO_ROOT / "build" / "programming_examples" / "block_sparse" / "run_block_spmm"
 
 # ── Group definitions ────────────────────────────────────────────────────────
 # Each group has a list of "runs": (registry, test_idx, hc_verbose_idx, label)
 # hc_verbose_idx is the index into HostCodeRegistryVerbose used by run_block_spmm:
 #   0=Naive(LB), 1=SnF(LB), 2=CDA(LB), 3=CDA_no_lb, 4=Naive_no_lb, 5=SnF_no_lb
 
+
 def _load_imbalance_runs(registry):
     """6 host codes x 2 tests for a triangular registry."""
-    hcs = [(0, "Naive"), (4, "Naive_no_lb"), (1, "SnF"), (5, "SnF_no_lb"),
-           (2, "CDA"), (3, "CDA_no_lb")]
+    hcs = [(0, "Naive"), (4, "Naive_no_lb"), (1, "SnF"), (5, "SnF_no_lb"), (2, "CDA"), (3, "CDA_no_lb")]
     runs = []
     for test in [0, 1]:
         for hc_v, label in hcs:
@@ -76,8 +79,7 @@ def _multi_diag_ultra_sparse_runs():
 
 def _load_imbalance_random_runs():
     """6 host codes x 1 test (random 25% density, registry 4 / PatternD25, test 3)."""
-    hcs = [(0, "Naive"), (4, "Naive_no_lb"), (1, "SnF"), (5, "SnF_no_lb"),
-           (2, "CDA"), (3, "CDA_no_lb")]
+    hcs = [(0, "Naive"), (4, "Naive_no_lb"), (1, "SnF"), (5, "SnF_no_lb"), (2, "CDA"), (3, "CDA_no_lb")]
     return [(4, 3, hc_v, label) for hc_v, label in hcs]
 
 
@@ -90,15 +92,13 @@ def _table1_sparse_runs():
     Diagonal, R=C=64, d=0.6% -> registry 27 (PatternUltra64_6000), test 2 (multi_diag)
     """
     cases = [
-        (4,  0, "Row_R256_d25"),
-        (5,  2, "Banded_R256_d50"),
+        (4, 0, "Row_R256_d25"),
+        (5, 2, "Banded_R256_d50"),
         (27, 0, "Row_R64_d0.6"),
         (27, 2, "Diagonal_R64_d0.6"),
     ]
     hcs = [(0, "Naive"), (1, "SnF"), (2, "CDA")]
-    return [(reg, test, hc_v, f"{hc_label}_{desc}")
-            for reg, test, desc in cases
-            for hc_v, hc_label in hcs]
+    return [(reg, test, hc_v, f"{hc_label}_{desc}") for reg, test, desc in cases for hc_v, hc_label in hcs]
 
 
 def _table1_triangular_runs():
@@ -112,9 +112,7 @@ def _table1_triangular_runs():
         (30, 0, "UpperTri_R256"),
     ]
     hcs = [(0, "Naive"), (1, "SnF"), (2, "CDA")]
-    return [(reg, test, hc_v, f"{hc_label}_{desc}")
-            for reg, test, desc in cases
-            for hc_v, hc_label in hcs]
+    return [(reg, test, hc_v, f"{hc_label}_{desc}") for reg, test, desc in cases for hc_v, hc_label in hcs]
 
 
 GROUPS = {
@@ -193,12 +191,9 @@ def reset_board():
 
 def main():
     parser = argparse.ArgumentParser(description="Count per-core DRAM reads from DPRINT")
-    parser.add_argument("--group", required=True, choices=GROUPS.keys(),
-                        help="Profiling group to run")
-    parser.add_argument("--dry-run", action="store_true",
-                        help="Print commands without executing")
-    parser.add_argument("--output-dir", default=None,
-                        help="Output directory for CSV (default: scripts/)")
+    parser.add_argument("--group", required=True, choices=GROUPS.keys(), help="Profiling group to run")
+    parser.add_argument("--dry-run", action="store_true", help="Print commands without executing")
+    parser.add_argument("--output-dir", default=None, help="Output directory for CSV (default: scripts/)")
     args = parser.parse_args()
 
     group = GROUPS[args.group]
@@ -213,12 +208,12 @@ def main():
     total_runs = len(runs)
 
     for run_num, (registry, test_idx, hc_verbose, hc_label) in enumerate(runs, 1):
-        print(f"[{run_num}/{total_runs}] registry={registry} test={test_idx} "
-              f"hc={hc_label} (verbose_idx={hc_verbose})")
+        print(
+            f"[{run_num}/{total_runs}] registry={registry} test={test_idx} " f"hc={hc_label} (verbose_idx={hc_verbose})"
+        )
 
         if args.dry_run:
-            print(f"  DRY-RUN: TT_METAL_DPRINT_CORES=worker "
-                  f"{RUN_BIN} {test_idx} {hc_verbose} {registry}")
+            print(f"  DRY-RUN: TT_METAL_DPRINT_CORES=worker " f"{RUN_BIN} {test_idx} {hc_verbose} {registry}")
             continue
 
         reset_board()
@@ -226,23 +221,34 @@ def main():
         counts = parse_dprint_output(output)
 
         for (x, y), c in sorted(counts.items()):
-            rows.append({
-                "group": args.group,
-                "registry": registry,
-                "test": test_idx,
-                "host_code": hc_label,
-                "core_x": x,
-                "core_y": y,
-                "in0_reads": c["in0"],
-                "in1_reads": c["in1"],
-            })
+            rows.append(
+                {
+                    "group": args.group,
+                    "registry": registry,
+                    "test": test_idx,
+                    "host_code": hc_label,
+                    "core_x": x,
+                    "core_y": y,
+                    "in0_reads": c["in0"],
+                    "in1_reads": c["in1"],
+                }
+            )
 
     if not args.dry_run and rows:
         with open(output_path, "w", newline="") as f:
-            writer = csv.DictWriter(f, fieldnames=[
-                "group", "registry", "test", "host_code",
-                "core_x", "core_y", "in0_reads", "in1_reads",
-            ])
+            writer = csv.DictWriter(
+                f,
+                fieldnames=[
+                    "group",
+                    "registry",
+                    "test",
+                    "host_code",
+                    "core_x",
+                    "core_y",
+                    "in0_reads",
+                    "in1_reads",
+                ],
+            )
             writer.writeheader()
             writer.writerows(rows)
         print(f"\nSaved: {output_path} ({len(rows)} rows)")

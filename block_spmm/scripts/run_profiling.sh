@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ###############################################################################
-# SC26 Block SpMM Profiling Script
+# BlockSpMM Block SpMM Profiling Script
 #
 # Orchestrates three experiment phases:
 #   microbench  - Ablation study (registries 0-1, host codes 0-14)
@@ -10,8 +10,8 @@ set -euo pipefail
 #   scaling     - CDA scaling      (registries 6-9, host code 2)
 ###############################################################################
 
-REPO_ROOT="/home/user/tt-metal"
-BUILD_DIR="${REPO_ROOT}/build_Release_tracy/programming_examples/rahmy"
+REPO_ROOT="${TT_METAL_HOME:?TT_METAL_HOME must be set — set it to your tt-metal checkout path}"
+BUILD_DIR="${REPO_ROOT}/build_Release_tracy/programming_examples/block_sparse"
 PROFILE_BIN="${BUILD_DIR}/profile_block_spmm"
 EXPORT_BIN="${BUILD_DIR}/export_block_spmm_to_csv"
 
@@ -143,9 +143,9 @@ build_once() {
         echo "[build] Skipped (--no-build)"
         return
     fi
-    echo "[build] cmake --build ${REPO_ROOT}/build --target rahmy -j$(nproc)"
+    echo "[build] cmake --build ${REPO_ROOT}/build --target block_sparse -j$(nproc)"
     if [[ $DRY_RUN -eq 0 ]]; then
-        cmake --build "${REPO_ROOT}/build" --target rahmy -j"$(nproc)"
+        cmake --build "${REPO_ROOT}/build" --target block_sparse -j"$(nproc)"
     fi
 }
 
@@ -256,7 +256,7 @@ run_ultralowdensity() {
 }
 
 # ── Main ─────────────────────────────────────────────────────────────────────
-echo "SC26 Block SpMM Profiling"
+echo "BlockSpMM Block SpMM Profiling"
 echo "Phase: $PHASE"
 echo ""
 

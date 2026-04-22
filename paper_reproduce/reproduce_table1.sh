@@ -25,13 +25,17 @@ set -euo pipefail
 #         6 DPRINT runs for triangular cases (table1_triangular_cases group).
 ###############################################################################
 
-REPO_ROOT="/home/user/tt-metal"
+REPO_ROOT="${TT_METAL_HOME:?TT_METAL_HOME must be set — set it to your tt-metal checkout path}"
+
+# Profile binary invokes ./capture-release (Tracy) and ./csvexport-release
+# via std::system() relative to CWD. Ensure CWD is REPO_ROOT so symlinks resolve.
+cd "$REPO_ROOT"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-SC26_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
-BUILD_DIR="${REPO_ROOT}/build/programming_examples/rahmy"
+BLKSPMM_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+BUILD_DIR="${REPO_ROOT}/build/programming_examples/block_sparse"
 PROFILE_BIN="${BUILD_DIR}/profile_block_spmm"
 EXPORT_BIN="${BUILD_DIR}/export_block_spmm_to_csv"
-SCRIPTS_DIR="${SC26_ROOT}/block_spmm/scripts"
+SCRIPTS_DIR="${BLKSPMM_ROOT}/block_spmm/scripts"
 COUNT_DRAM="${SCRIPTS_DIR}/count_dram_reads.py"
 
 # 6 Table-1 cases: (registry, test, label)

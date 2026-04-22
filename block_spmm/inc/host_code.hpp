@@ -30,7 +30,7 @@ using sparse_common::MakeBuffer;
 using sparse_common::MakeCircularBuffer;
 using sparse_common::MakeCircularBufferFP32;
 
-// ── Algorithm declarations (3 algorithms for SC26 submission) ──
+// ── Algorithm declarations (3 algorithms for BlockSpMM submission) ──
 
 // Paper name: "Naive"
 template<bool verbose = false, bool is_profiling = false, bool use_optimal_noc = true>

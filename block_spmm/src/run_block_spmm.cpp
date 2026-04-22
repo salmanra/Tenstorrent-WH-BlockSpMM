@@ -91,7 +91,7 @@ void run_test(
 
     // run bsr_spmm_multicore_reuse
     // console_printf("Entering host code\n");
-    
+
     host_func(a, b, output, false, nblocks, M, N, K, R, C, 1, device);
     // console_printf("exiting host code\n");
 
@@ -185,7 +185,7 @@ int main(int argc, char** argv) {
             console_printf("No test specified. Returning.\n");
             return 0;
         }
-        
+
         run_full_test(host_code_index, test_num, Registry);
         console_printf("Leaving the test program\n");
     }

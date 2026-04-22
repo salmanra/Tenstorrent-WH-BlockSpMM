@@ -16,18 +16,18 @@ import sys
 from pathlib import Path
 
 TRI_ALGOS = [
-    ("Naive", "LB",    "bsr_spmm_multicore_load_balanced_new_DM"),
+    ("Naive", "LB", "bsr_spmm_multicore_load_balanced_new_DM"),
     ("Naive", "no-LB", "bsr_spmm_multicore_load_balanced_new_DM_no_lb"),
-    ("SnF",   "LB",    "bsr_spmm_multicore_snf"),
-    ("SnF",   "no-LB", "bsr_spmm_multicore_snf_no_lb"),
-    ("DDA",   "LB",    "bsr_spmm_multicore_snfin0_cdain1"),
-    ("DDA",   "no-LB", "bsr_spmm_multicore_snfin0_cdain1_no_lb"),
+    ("SnF", "LB", "bsr_spmm_multicore_snf"),
+    ("SnF", "no-LB", "bsr_spmm_multicore_snf_no_lb"),
+    ("DDA", "LB", "bsr_spmm_multicore_snfin0_cdain1"),
+    ("DDA", "no-LB", "bsr_spmm_multicore_snfin0_cdain1_no_lb"),
 ]
 
 TRI_CASES = [
     # (label, prefix_suffix, registry_dir, stem_prefix, sizes)
-    ("Lower", "lower",  "Triangular",      "parametric_tril", [8192, 4096]),
-    ("Upper", "upper",  "UpperTriangular", "parametric_triu", [8192, 4096]),
+    ("Lower", "lower", "Triangular", "parametric_tril", [8192, 4096]),
+    ("Upper", "upper", "UpperTriangular", "parametric_triu", [8192, 4096]),
 ]
 
 RANDOM_REGISTRY = "PatternD25"
@@ -56,9 +56,12 @@ def extract_host_ms(csv_path: Path) -> float | None:
 
 def main():
     p = argparse.ArgumentParser(description="Aggregate Table 2 into a single CSV.")
-    p.add_argument("--output-prefix", type=Path, required=True,
-                   help="Prefix used by reproduce_table2.sh "
-                        "(e.g. /home/user/tt-metal/profiles_paper_table2)")
+    p.add_argument(
+        "--output-prefix",
+        type=Path,
+        required=True,
+        help="Prefix used by reproduce_table2.sh " "(e.g. $TT_METAL_HOME/profiles_paper_table2)",
+    )
     p.add_argument("--out-csv", type=Path, required=True)
     args = p.parse_args()
 
@@ -74,14 +77,16 @@ def main():
                 tflops = extract_tflops(log)
                 if tflops is None:
                     missing += 1
-                rows.append({
-                    "case":        f"{tri_label}-Triangular",
-                    "matrix_size": size,
-                    "algorithm":   algo_label,
-                    "lb_variant":  variant,
-                    "tflops":      tflops,
-                    "host_ms_per_iter": None,
-                })
+                rows.append(
+                    {
+                        "case": f"{tri_label}-Triangular",
+                        "matrix_size": size,
+                        "algorithm": algo_label,
+                        "lb_variant": variant,
+                        "tflops": tflops,
+                        "host_ms_per_iter": None,
+                    }
+                )
 
     # Random 25% case
     random_root = Path(str(args.output_prefix) + "_random") / "csvs" / RANDOM_REGISTRY
@@ -92,26 +97,34 @@ def main():
         tflops = extract_tflops(log)
         if host_ms is None:
             missing += 1
-        rows.append({
-            "case":        "Random_d25",
-            "matrix_size": 8192,
-            "algorithm":   algo_label,
-            "lb_variant":  variant,
-            "tflops":      tflops,
-            "host_ms_per_iter": host_ms,
-        })
+        rows.append(
+            {
+                "case": "Random_d25",
+                "matrix_size": 8192,
+                "algorithm": algo_label,
+                "lb_variant": variant,
+                "tflops": tflops,
+                "host_ms_per_iter": host_ms,
+            }
+        )
 
     args.out_csv.parent.mkdir(parents=True, exist_ok=True)
     with open(args.out_csv, "w", newline="") as f:
-        w = csv.DictWriter(f, fieldnames=[
-            "case", "matrix_size", "algorithm", "lb_variant",
-            "tflops", "host_ms_per_iter",
-        ])
+        w = csv.DictWriter(
+            f,
+            fieldnames=[
+                "case",
+                "matrix_size",
+                "algorithm",
+                "lb_variant",
+                "tflops",
+                "host_ms_per_iter",
+            ],
+        )
         w.writeheader()
         w.writerows(rows)
 
-    print(f"Wrote {len(rows)} rows to {args.out_csv}" +
-          (f" ({missing} missing cells)" if missing else ""))
+    print(f"Wrote {len(rows)} rows to {args.out_csv}" + (f" ({missing} missing cells)" if missing else ""))
     sys.exit(0 if missing == 0 else 1)
 
 

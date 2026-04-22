@@ -12,9 +12,9 @@
 
 set -euo pipefail
 
-TT_METAL_DIR="/home/user/tt-metal"
-PROFILE_BIN="$TT_METAL_DIR/build/programming_examples/rahmy/profile_block_spmm"
-EXPORT_BIN="$TT_METAL_DIR/build/programming_examples/rahmy/export_block_spmm_to_csv"
+TT_METAL_DIR="${TT_METAL_HOME:?TT_METAL_HOME must be set}"
+PROFILE_BIN="$TT_METAL_DIR/build/programming_examples/block_sparse/profile_block_spmm"
+EXPORT_BIN="$TT_METAL_DIR/build/programming_examples/block_sparse/export_block_spmm_to_csv"
 
 OUTPUT_DIR="profiles_sweep_pattern"
 DRY_RUN=0

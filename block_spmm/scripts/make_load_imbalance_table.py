@@ -23,43 +23,40 @@ from pathlib import Path
 
 # ── Configuration ────────────────────────────────────────────────────────────
 TRI_ALGOS = [
-    ("bsr_spmm_multicore_load_balanced_new_DM",          "Naive",  "LB"),
-    ("bsr_spmm_multicore_load_balanced_new_DM_no_lb",    "Naive",  "no-LB"),
-    ("bsr_spmm_multicore_snf",                            "SnF",    "LB"),
-    ("bsr_spmm_multicore_snf_no_lb",                      "SnF",    "no-LB"),
-    ("bsr_spmm_multicore_snfin0_cdain1",                  "DDA",    "LB"),
-    ("bsr_spmm_multicore_snfin0_cdain1_no_lb",            "DDA",    "no-LB"),
+    ("bsr_spmm_multicore_load_balanced_new_DM", "Naive", "LB"),
+    ("bsr_spmm_multicore_load_balanced_new_DM_no_lb", "Naive", "no-LB"),
+    ("bsr_spmm_multicore_snf", "SnF", "LB"),
+    ("bsr_spmm_multicore_snf_no_lb", "SnF", "no-LB"),
+    ("bsr_spmm_multicore_snfin0_cdain1", "DDA", "LB"),
+    ("bsr_spmm_multicore_snfin0_cdain1_no_lb", "DDA", "no-LB"),
 ]
 
 TRI_DATASETS = [
     {
-        "data_dir": Path("/home/user/tt-metal/profiles_load_imbalance_V2/csvs"),
+        "data_dir": Path("${TT_METAL_HOME}/profiles_load_imbalance_V2/csvs"),
         "registry": "Triangular",
-        "prefix":   "tril",
-        "label":    "Lower",
+        "prefix": "tril",
+        "label": "Lower",
     },
     {
-        "data_dir": Path("/home/user/tt-metal/profiles_load_imbalance_upper_V2/csvs"),
+        "data_dir": Path("${TT_METAL_HOME}/profiles_load_imbalance_upper_V2/csvs"),
         "registry": "UpperTriangular",
-        "prefix":   "triu",
-        "label":    "Upper",
+        "prefix": "triu",
+        "label": "Upper",
     },
 ]
 
 SIZES = ["8192", "4096"]
 
 RANDOM_ALGOS = [
-    ("bsr_spmm_multicore_load_balanced_new_DM",
-     "bsr_spmm_multicore_load_balanced_new_DM_no_lb", "Naive"),
-    ("bsr_spmm_multicore_snf",
-     "bsr_spmm_multicore_snf_no_lb",                  "SnF"),
-    ("bsr_spmm_multicore_snfin0_cdain1",
-     "bsr_spmm_multicore_snfin0_cdain1_no_lb",        "DDA"),
+    ("bsr_spmm_multicore_load_balanced_new_DM", "bsr_spmm_multicore_load_balanced_new_DM_no_lb", "Naive"),
+    ("bsr_spmm_multicore_snf", "bsr_spmm_multicore_snf_no_lb", "SnF"),
+    ("bsr_spmm_multicore_snfin0_cdain1", "bsr_spmm_multicore_snfin0_cdain1_no_lb", "DDA"),
 ]
-RANDOM_DATA_DIR = Path("/home/user/tt-metal/profiles_load_imbalance_random/csvs")
+RANDOM_DATA_DIR = Path("${TT_METAL_HOME}/profiles_load_imbalance_random/csvs")
 RANDOM_REGISTRY = "PatternD25"
-RANDOM_TEST     = "parametric_M8192_N8192_K8192_R256_C256_dppm250000"
-RANDOM_ITERS    = 10  # HOST_LOOP_ITERATIONS in profile_block_spmm.cpp
+RANDOM_TEST = "parametric_M8192_N8192_K8192_R256_C256_dppm250000"
+RANDOM_ITERS = 10  # HOST_LOOP_ITERATIONS in profile_block_spmm.cpp
 
 
 # ── Data extraction ──────────────────────────────────────────────────────────
@@ -94,8 +91,12 @@ def build_section_a():
             entry = {}
             for ds in TRI_DATASETS:
                 for sz in SIZES:
-                    log = (ds["data_dir"] / ds["registry"] / algo_dir
-                           / f"parametric_{ds['prefix']}_M{sz}_N{sz}_K{sz}_R256_C256_sparse.log")
+                    log = (
+                        ds["data_dir"]
+                        / ds["registry"]
+                        / algo_dir
+                        / f"parametric_{ds['prefix']}_M{sz}_N{sz}_K{sz}_R256_C256_sparse.log"
+                    )
                     entry[f"{ds['label'].lower()}_{sz}_tflops"] = extract_tflops(log)
             tflops[(name, variant)] = entry
 
@@ -105,8 +106,7 @@ def build_section_a():
         for variant in ("LB", "no-LB"):
             row = {"algorithm": name, "variant": variant}
             row.update(tflops[(name, variant)])
-            for key in ("lower_8192_tflops", "lower_4096_tflops",
-                        "upper_8192_tflops", "upper_4096_tflops"):
+            for key in ("lower_8192_tflops", "lower_4096_tflops", "upper_8192_tflops", "upper_4096_tflops"):
                 speedup_key = key.replace("_tflops", "_lb_speedup")
                 if variant == "LB":
                     lb_v = tflops[(name, "LB")].get(key)
@@ -122,15 +122,17 @@ def build_section_b():
     """Section B: random workload host-ms + speedup. Returns list of dict rows."""
     rows = []
     for lb_dir, no_lb_dir, name in RANDOM_ALGOS:
-        lb_ms = extract_host_ms(RANDOM_DATA_DIR / RANDOM_REGISTRY / lb_dir    / f"{RANDOM_TEST}.csv")
+        lb_ms = extract_host_ms(RANDOM_DATA_DIR / RANDOM_REGISTRY / lb_dir / f"{RANDOM_TEST}.csv")
         no_ms = extract_host_ms(RANDOM_DATA_DIR / RANDOM_REGISTRY / no_lb_dir / f"{RANDOM_TEST}.csv")
         speedup = (no_ms / lb_ms) if (lb_ms and no_ms and lb_ms > 0) else None
-        rows.append({
-            "algorithm": name,
-            "lb_ms":     lb_ms,
-            "no_lb_ms":  no_ms,
-            "speedup":   speedup,
-        })
+        rows.append(
+            {
+                "algorithm": name,
+                "lb_ms": lb_ms,
+                "no_lb_ms": no_ms,
+                "speedup": speedup,
+            }
+        )
     return rows
 
 
@@ -149,39 +151,53 @@ def main():
         # ── Section A ──
         # Speedup convention (matches Section B): lb_tflops / no_lb_tflops.
         # > 1 means LB is faster; populated on the LB row only.
-        w.writerow(["# Section A: TFLOP/s on triangular matrices "
-                    "(M=N=K, R=C=256). lb_speedup = lb_tflops / no_lb_tflops."])
-        w.writerow(["algorithm", "variant",
-                    "lower_8192_tflops", "lower_4096_tflops",
-                    "upper_8192_tflops", "upper_4096_tflops",
-                    "lower_8192_lb_speedup", "lower_4096_lb_speedup",
-                    "upper_8192_lb_speedup", "upper_4096_lb_speedup"])
+        w.writerow(
+            ["# Section A: TFLOP/s on triangular matrices " "(M=N=K, R=C=256). lb_speedup = lb_tflops / no_lb_tflops."]
+        )
+        w.writerow(
+            [
+                "algorithm",
+                "variant",
+                "lower_8192_tflops",
+                "lower_4096_tflops",
+                "upper_8192_tflops",
+                "upper_4096_tflops",
+                "lower_8192_lb_speedup",
+                "lower_4096_lb_speedup",
+                "upper_8192_lb_speedup",
+                "upper_4096_lb_speedup",
+            ]
+        )
         for row in section_a:
-            w.writerow([
-                row["algorithm"], row["variant"],
-                row.get("lower_8192_tflops"),
-                row.get("lower_4096_tflops"),
-                row.get("upper_8192_tflops"),
-                row.get("upper_4096_tflops"),
-                row.get("lower_8192_lb_speedup"),
-                row.get("lower_4096_lb_speedup"),
-                row.get("upper_8192_lb_speedup"),
-                row.get("upper_4096_lb_speedup"),
-            ])
+            w.writerow(
+                [
+                    row["algorithm"],
+                    row["variant"],
+                    row.get("lower_8192_tflops"),
+                    row.get("lower_4096_tflops"),
+                    row.get("upper_8192_tflops"),
+                    row.get("upper_4096_tflops"),
+                    row.get("lower_8192_lb_speedup"),
+                    row.get("lower_4096_lb_speedup"),
+                    row.get("upper_8192_lb_speedup"),
+                    row.get("upper_4096_lb_speedup"),
+                ]
+            )
 
         w.writerow([])
 
         # ── Section B ──
-        w.writerow(["# Section B: Random 25%-density workload "
-                    "(M=N=K=8192, R=C=256), host-side ms / iter"])
+        w.writerow(["# Section B: Random 25%-density workload " "(M=N=K=8192, R=C=256), host-side ms / iter"])
         w.writerow(["algorithm", "lb_ms", "no_lb_ms", "speedup_no_lb_over_lb"])
         for row in section_b:
-            w.writerow([
-                row["algorithm"],
-                row.get("lb_ms"),
-                row.get("no_lb_ms"),
-                row.get("speedup"),
-            ])
+            w.writerow(
+                [
+                    row["algorithm"],
+                    row.get("lb_ms"),
+                    row.get("no_lb_ms"),
+                    row.get("speedup"),
+                ]
+            )
 
     print(f"Saved: {out_path}")
 

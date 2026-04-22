@@ -9,7 +9,7 @@ set -euo pipefail
 #   R=C=32  block, densities 0.003%, 0.03%, 0.3%     (3 density bins)
 #   R=C=64  block, densities 0.006%, 0.06%, 0.6%, 1% (4 density bins)
 #
-# Registries (see SC26_submission/block_spmm/inc/profiling_suite.hpp):
+# Registries (see Tenstorrent-WH-BlockSpMM/block_spmm/inc/profiling_suite.hpp):
 #   17 PatternUltra32_30     (d = 0.003%)
 #   19 PatternUltra32_300    (d = 0.03%)
 #   21 PatternUltra32_3000   (d = 0.3%)
@@ -23,10 +23,15 @@ set -euo pipefail
 # Total: 7 registries x 4 patterns = 28 runs.
 ###############################################################################
 
-REPO_ROOT="/home/user/tt-metal"
-BUILD_DIR="${REPO_ROOT}/build/programming_examples/rahmy"
+REPO_ROOT="${TT_METAL_HOME:?TT_METAL_HOME must be set — set it to your tt-metal checkout path}"
+BUILD_DIR="${REPO_ROOT}/build/programming_examples/block_sparse"
 PROFILE_BIN="${BUILD_DIR}/profile_block_spmm"
 EXPORT_BIN="${BUILD_DIR}/export_block_spmm_to_csv"
+
+# The profile binary internally invokes ./capture-release (Tracy) and
+# ./csvexport-release via std::system() relative to its CWD. Ensure CWD is
+# REPO_ROOT for those symlinks to resolve.
+cd "$REPO_ROOT"
 
 REGISTRIES=(17 19 21 23 25 27 28)
 TESTS=(0 1 2 3)   # row, col, multi_diag, random

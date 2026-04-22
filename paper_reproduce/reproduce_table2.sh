@@ -18,16 +18,20 @@ set -euo pipefail
 # Total: 12 + 12 + 6 = 30 profiling runs.
 #
 # This orchestrates the three existing scripts in
-# SC26_submission/block_spmm/scripts/:
+# Tenstorrent-WH-BlockSpMM/block_spmm/scripts/:
 #   run_load_imbalance.sh         (lower-triangular)
 #   run_load_imbalance_upper.sh   (upper-triangular)
 #   run_load_imbalance_random.sh  (random 25%)
 ###############################################################################
 
-REPO_ROOT="/home/user/tt-metal"
+REPO_ROOT="${TT_METAL_HOME:?TT_METAL_HOME must be set — set it to your tt-metal checkout path}"
+
+# Profile binary invokes ./capture-release (Tracy) and ./csvexport-release
+# via std::system() relative to CWD. Ensure CWD is REPO_ROOT so symlinks resolve.
+cd "$REPO_ROOT"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-SC26_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
-SCRIPTS_DIR="${SC26_ROOT}/block_spmm/scripts"
+BLKSPMM_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+SCRIPTS_DIR="${BLKSPMM_ROOT}/block_spmm/scripts"
 
 OUTPUT_PREFIX="profiles_paper_table2"
 DRY_RUN=0

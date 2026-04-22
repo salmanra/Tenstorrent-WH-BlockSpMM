@@ -9,9 +9,16 @@ set(HOST_CODE_SOURCES
 
 add_library(sddmm_host_code STATIC ${HOST_CODE_SOURCES})
 
-target_include_directories(sddmm_host_code PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR}/..
-    ${CMAKE_SOURCE_DIR}/ttnn/cpp
+target_include_directories(
+    sddmm_host_code
+    PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/..
+        ${CMAKE_SOURCE_DIR}/ttnn/cpp
 )
 
-target_link_libraries(sddmm_host_code PUBLIC sparse_common tt_metal)
+target_link_libraries(
+    sddmm_host_code
+    PUBLIC
+        sparse_common
+        tt_metal
+)

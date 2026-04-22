@@ -1,0 +1,5 @@
+# Python dependencies for paper_reproduce/ aggregator scripts.
+# Versions unpinned; any recent release works.
+pandas
+matplotlib
+numpy

@@ -5,9 +5,9 @@
 
 #include <stdint.h>
 #include "dataflow_api.h"
-#include "tt_metal/programming_examples/rahmy/SC26_submission/block_spmm/kernels/common/spmm_tile_ops.hpp"
+#include "tt_metal/programming_examples/Tenstorrent-WH-BlockSpMM/block_spmm/kernels/common/spmm_tile_ops.hpp"
 
-TODO: this will not work. What data sharing scheme will? 
+TODO: this will not work. What data sharing scheme will?
 
 void kernel_main() {
     // ── Compile-time args ────────────────────────────────────────────
@@ -129,7 +129,7 @@ void kernel_main() {
         -> My sender is the min over core_idx_x in the core set which are greater than my core_idx_x
         -> My receiver is the max over core_idx_x in the core set which are less than my core_idx_x
         Which data structures does the host have to send over for the cores to know this data?
-            For each core in this grid row, for each output block each core is processing, 
+            For each core in this grid row, for each output block each core is processing,
         */
         for (uint32_t k = 0; k < num_blocks_k; k++) {
             // TODO: replace this block with CDA-like code for each k

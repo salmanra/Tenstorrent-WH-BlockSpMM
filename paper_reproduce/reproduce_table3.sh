@@ -17,7 +17,7 @@ set -euo pipefail
 # Total: 3 registries x 5 cases x 2 algos = 30 runs.
 #
 # The SDDMM binaries hardcode their output to
-#   /home/user/tt-metal/sddmm_profiles/opt_noc/{traces,csvs}/<registry>/<host_code>/
+#   ${TT_METAL_HOME}/sddmm_profiles/opt_noc/{traces,csvs}/<registry>/<host_code>/
 # so this script does not take an --output-dir. Plots/tables downstream expect
 # exactly this path.
 #
@@ -25,10 +25,14 @@ set -euo pipefail
 # selecting only sweep phase + registries 1, 2, 3 + host codes 0, 1.
 ###############################################################################
 
-REPO_ROOT="/home/user/tt-metal"
+REPO_ROOT="${TT_METAL_HOME:?TT_METAL_HOME must be set — set it to your tt-metal checkout path}"
+
+# Profile binary invokes ./capture-release (Tracy) and ./csvexport-release
+# via std::system() relative to CWD. Ensure CWD is REPO_ROOT so symlinks resolve.
+cd "$REPO_ROOT"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-SC26_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
-SDDMM_SCRIPT="${SC26_ROOT}/block_sddmm/sddmm_scripts/run_sddmm_profiling.sh"
+BLKSPMM_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+SDDMM_SCRIPT="${BLKSPMM_ROOT}/block_sddmm/sddmm_scripts/run_sddmm_profiling.sh"
 
 DRY_RUN=0
 EXPORT_ONLY=0

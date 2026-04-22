@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ###############################################################################
-# Run all SC26 plotting scripts. Each script writes its figures to
+# Run all BlockSpMM plotting scripts. Each script writes its figures to
 # scripts/figures/.
 ###############################################################################
 

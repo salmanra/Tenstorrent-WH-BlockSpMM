@@ -16,24 +16,24 @@ DDA_HC = "bsr_spmm_multicore_snfin0_cdain1"
 
 # (registry_idx, registry_name, block_size, density_label)
 FIG3_REGISTRIES = [
-    (17, "PatternUltra32_30",    32, "0.003%"),
-    (19, "PatternUltra32_300",   32, "0.03%"),
-    (21, "PatternUltra32_3000",  32, "0.3%"),
-    (23, "PatternUltra64_60",    64, "0.006%"),
-    (25, "PatternUltra64_600",   64, "0.06%"),
-    (27, "PatternUltra64_6000",  64, "0.6%"),
+    (17, "PatternUltra32_30", 32, "0.003%"),
+    (19, "PatternUltra32_300", 32, "0.03%"),
+    (21, "PatternUltra32_3000", 32, "0.3%"),
+    (23, "PatternUltra64_60", 64, "0.006%"),
+    (25, "PatternUltra64_600", 64, "0.06%"),
+    (27, "PatternUltra64_6000", 64, "0.6%"),
     (28, "PatternUltra64_10000", 64, "1%"),
 ]
 
 FIG4_REGISTRIES = [
-    (13, "PatternD5_128",  128, "5%"),
+    (13, "PatternD5_128", 128, "5%"),
     (14, "PatternD10_128", 128, "10%"),
     (15, "PatternD25_128", 128, "25%"),
     (16, "PatternD50_128", 128, "50%"),
-    ( 2, "PatternD5",      256, "5%"),
-    ( 3, "PatternD10",     256, "10%"),
-    ( 4, "PatternD25",     256, "25%"),
-    ( 5, "PatternD50",     256, "50%"),
+    (2, "PatternD5", 256, "5%"),
+    (3, "PatternD10", 256, "10%"),
+    (4, "PatternD25", 256, "25%"),
+    (5, "PatternD50", 256, "50%"),
 ]
 
 
@@ -76,33 +76,46 @@ def aggregate(output_dir: Path, registries, out_csv: Path) -> int:
             if tflops is None:
                 missing += 1
                 print(f"  [warn] missing TFLOPs: reg={reg_idx} pattern={pat}", file=sys.stderr)
-            rows.append({
-                "registry":      reg_idx,
-                "registry_name": reg_name,
-                "block_size":    block_size,
-                "density":       density,
-                "pattern":       pat,
-                "tflops":        tflops,
-            })
+            rows.append(
+                {
+                    "registry": reg_idx,
+                    "registry_name": reg_name,
+                    "block_size": block_size,
+                    "density": density,
+                    "pattern": pat,
+                    "tflops": tflops,
+                }
+            )
 
     out_csv.parent.mkdir(parents=True, exist_ok=True)
     with open(out_csv, "w", newline="") as f:
-        writer = csv.DictWriter(f, fieldnames=[
-            "registry", "registry_name", "block_size", "density", "pattern", "tflops",
-        ])
+        writer = csv.DictWriter(
+            f,
+            fieldnames=[
+                "registry",
+                "registry_name",
+                "block_size",
+                "density",
+                "pattern",
+                "tflops",
+            ],
+        )
         writer.writeheader()
         writer.writerows(rows)
 
-    print(f"Wrote {len(rows)} rows to {out_csv}" +
-          (f" ({missing} missing)" if missing else ""))
+    print(f"Wrote {len(rows)} rows to {out_csv}" + (f" ({missing} missing)" if missing else ""))
     return missing
 
 
 def main():
     p = argparse.ArgumentParser(description="Aggregate Fig. 3 or Fig. 4 DDA throughput.")
     p.add_argument("--figure", choices=["3", "4"], required=True, help="Which figure")
-    p.add_argument("--output-dir", type=Path, required=True,
-                   help="Raw profiling output root (e.g. /home/user/tt-metal/profiles_paper_fig3)")
+    p.add_argument(
+        "--output-dir",
+        type=Path,
+        required=True,
+        help="Raw profiling output root (e.g. $TT_METAL_HOME/profiles_paper_fig3)",
+    )
     p.add_argument("--out-csv", type=Path, required=True, help="Aggregated CSV path")
     args = p.parse_args()
 

@@ -92,7 +92,7 @@ namespace bsr_test_suite {
     std::tuple<bsr_matrix<bfloat16>, dense_matrix<bfloat16>, std::string>  profile_case_sparse_fill_random_large();
 
     std::tuple<bsr_matrix<bfloat16>, dense_matrix<bfloat16>, std::string> test_triangular();
-    
+
 
     using TestFunctionPtr = std::tuple<bsr_matrix<bfloat16>, dense_matrix<bfloat16>, std::string> (*)();
 
@@ -818,7 +818,7 @@ namespace bsr_test_suite {
         uint32_t C = 64;
         uint32_t block_matrix_height = M / R;
         uint32_t block_matrix_width = K / C;
-        uint32_t nblocks = (block_matrix_height * block_matrix_width) / 4; 
+        uint32_t nblocks = (block_matrix_height * block_matrix_width) / 4;
 
         bsr_matrix<float> bsr(M, K, R, C, nblocks, RAND);
         dense_matrix<float> dense(K, N, RAND);
@@ -848,7 +848,7 @@ namespace bsr_test_suite {
         return std::make_tuple(bsr_bfloat16, dense_bfloat16, "test_many_iters_x");
     }
     std::tuple<bsr_matrix<bfloat16>, dense_matrix<bfloat16>, std::string> test_many_iters_both() {
-        // TODO: this test case is VERY interesting now: there are enough nz rows to fill HALF 
+        // TODO: this test case is VERY interesting now: there are enough nz rows to fill HALF
         //       of the alloted runtime args per kernel (124/256 for reader_in0_snf)
         //       this also takes 10 minutes in my sequential CPU version
         //       while taking one second (less?) on the device
@@ -861,7 +861,7 @@ namespace bsr_test_suite {
         uint32_t C = 64;
         uint32_t block_matrix_height = M / R;
         uint32_t block_matrix_width = K / C;
-        uint32_t nblocks = (block_matrix_height * block_matrix_width) / 4; 
+        uint32_t nblocks = (block_matrix_height * block_matrix_width) / 4;
 
 
         bsr_matrix<float> bsr(M, K, R, C, nblocks, RAND);
@@ -1018,7 +1018,7 @@ namespace bsr_test_suite {
         return std::make_tuple(bsr_bfloat16, dense_bfloat16, "test_basic");
     }
 
-     
+
     std::tuple<bsr_matrix<bfloat16>, dense_matrix<bfloat16>, std::string> test_triangular() {
         // matmul params setup
         uint32_t M = 8192;
@@ -1934,7 +1934,7 @@ namespace bsr_test_suite {
 
         constexpr float density = DensityPercent / 100.0f;
         uint32_t divisor = uint32_t(std::round(1.0 / density));
-        uint32_t nblocks = (block_matrix_height * block_matrix_width) / divisor; 
+        uint32_t nblocks = (block_matrix_height * block_matrix_width) / divisor;
 
         // nz blocks placed randomly
         bsr_matrix<float> bsr(M, K, R, C, nblocks, RAND);
@@ -1950,7 +1950,7 @@ namespace bsr_test_suite {
         return std::make_tuple(bsr_bfloat16, dense_bfloat16, test_name);
     }
 
-    
+
 
 } // namespace bsr_test_suite
 

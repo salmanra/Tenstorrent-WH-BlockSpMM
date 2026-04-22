@@ -4,10 +4,10 @@
 #include "hostdevcommon/kernel_structs.h"
 #include "debug/dprint.h"
 #include <tools/profiler/kernel_profiler.hpp>
-#include "tt_metal/programming_examples/rahmy/SC26_submission/block_spmm/kernels/common/spmm_reader_common.hpp"
-#include "tt_metal/programming_examples/rahmy/SC26_submission/block_spmm/kernels/common/spmm_tile_ops.hpp"
-#include "tt_metal/programming_examples/rahmy/SC26_submission/block_spmm/kernels/common/spmm_indexing.hpp"
-#include "tt_metal/programming_examples/rahmy/SC26_submission/block_spmm/kernels/common/spmm_profiling.hpp"
+#include "tt_metal/programming_examples/Tenstorrent-WH-BlockSpMM/block_spmm/kernels/common/spmm_reader_common.hpp"
+#include "tt_metal/programming_examples/Tenstorrent-WH-BlockSpMM/block_spmm/kernels/common/spmm_tile_ops.hpp"
+#include "tt_metal/programming_examples/Tenstorrent-WH-BlockSpMM/block_spmm/kernels/common/spmm_indexing.hpp"
+#include "tt_metal/programming_examples/Tenstorrent-WH-BlockSpMM/block_spmm/kernels/common/spmm_profiling.hpp"
 
 // Compile-time profiling zone toggles (override to 0 via CreateKernel defines)
 #ifndef PROFILE_READ_IN0
@@ -204,7 +204,7 @@ void kernel_main(){
                     noc_semaphore_inc(in0_sender_semaphore_noc_addr, 1);
                     noc_semaphore_wait(in0_receiver_semaphore_addr_ptr, 1);
                 }
-                
+
                 cb_push_back(spmm::cb_id_in0, in0_block_num_tiles);
 
                 if (!is_sink_core) {

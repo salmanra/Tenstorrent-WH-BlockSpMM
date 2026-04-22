@@ -4,10 +4,10 @@
 #include "hostdevcommon/kernel_structs.h"
 #include "debug/dprint.h"
 #include <tools/profiler/kernel_profiler.hpp>
-#include "tt_metal/programming_examples/rahmy/SC26_submission/block_spmm/kernels/common/spmm_reader_common.hpp"
-#include "tt_metal/programming_examples/rahmy/SC26_submission/block_spmm/kernels/common/spmm_tile_ops.hpp"
-#include "tt_metal/programming_examples/rahmy/SC26_submission/block_spmm/kernels/common/spmm_indexing.hpp"
-#include "tt_metal/programming_examples/rahmy/SC26_submission/block_spmm/kernels/common/spmm_profiling.hpp"
+#include "tt_metal/programming_examples/Tenstorrent-WH-BlockSpMM/block_spmm/kernels/common/spmm_reader_common.hpp"
+#include "tt_metal/programming_examples/Tenstorrent-WH-BlockSpMM/block_spmm/kernels/common/spmm_tile_ops.hpp"
+#include "tt_metal/programming_examples/Tenstorrent-WH-BlockSpMM/block_spmm/kernels/common/spmm_indexing.hpp"
+#include "tt_metal/programming_examples/Tenstorrent-WH-BlockSpMM/block_spmm/kernels/common/spmm_profiling.hpp"
 
 // Compile-time profiling zone toggle (override to 0 via CreateKernel defines)
 #ifndef PROFILE_READ_IN1

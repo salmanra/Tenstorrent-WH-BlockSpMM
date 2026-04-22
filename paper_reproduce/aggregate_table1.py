@@ -16,20 +16,36 @@ from pathlib import Path
 
 # Paper Table 1: (case label, registry_idx, registry_name, test_idx, test_stem, block_size, density_or_pattern)
 CASES = [
-    ("Row_R256_d25",      4,  "PatternD25",          0, "parametric_row_M8192_N8192_K8192_R256_C256_dppm250000", 256, "d=25%"),
-    ("Banded_R256_d50",   5,  "PatternD50",          2, "parametric_multi_diag_M8192_N8192_K8192_R256_C256_dppm500000", 256, "d=50%"),
-    ("Row_R64_d0.6",      27, "PatternUltra64_6000", 0, "parametric_row_M8192_N8192_K8192_R64_C64_dppm6000", 64, "d=0.6%"),
-    ("Diagonal_R64_d0.6", 27, "PatternUltra64_6000", 2, "parametric_multi_diag_M8192_N8192_K8192_R64_C64_dppm6000", 64, "d=0.6%"),
-    ("LowerTri_R256",     29, "Triangular",          0, "parametric_tril_M8192_N8192_K8192_R256_C256", 256, "lower-tri"),
-    ("UpperTri_R256",     30, "UpperTriangular",     0, "parametric_triu_M8192_N8192_K8192_R256_C256", 256, "upper-tri"),
+    ("Row_R256_d25", 4, "PatternD25", 0, "parametric_row_M8192_N8192_K8192_R256_C256_dppm250000", 256, "d=25%"),
+    (
+        "Banded_R256_d50",
+        5,
+        "PatternD50",
+        2,
+        "parametric_multi_diag_M8192_N8192_K8192_R256_C256_dppm500000",
+        256,
+        "d=50%",
+    ),
+    ("Row_R64_d0.6", 27, "PatternUltra64_6000", 0, "parametric_row_M8192_N8192_K8192_R64_C64_dppm6000", 64, "d=0.6%"),
+    (
+        "Diagonal_R64_d0.6",
+        27,
+        "PatternUltra64_6000",
+        2,
+        "parametric_multi_diag_M8192_N8192_K8192_R64_C64_dppm6000",
+        64,
+        "d=0.6%",
+    ),
+    ("LowerTri_R256", 29, "Triangular", 0, "parametric_tril_M8192_N8192_K8192_R256_C256", 256, "lower-tri"),
+    ("UpperTri_R256", 30, "UpperTriangular", 0, "parametric_triu_M8192_N8192_K8192_R256_C256", 256, "upper-tri"),
 ]
 
 # Algorithms: (display_label, dram_match_prefix, profiling_index, algo_dir_name)
 # NOTE: count_dram_reads.py labels DDA as "CDA_<case>" (historical name); paper uses "DDA".
 ALGOS = [
     ("Naive", "Naive", 0, "bsr_spmm_multicore_load_balanced_new_DM"),
-    ("SnF",   "SnF",   1, "bsr_spmm_multicore_snf"),
-    ("DDA",   "CDA",   2, "bsr_spmm_multicore_snfin0_cdain1"),
+    ("SnF", "SnF", 1, "bsr_spmm_multicore_snf"),
+    ("DDA", "CDA", 2, "bsr_spmm_multicore_snfin0_cdain1"),
 ]
 
 
@@ -65,10 +81,15 @@ def sum_dram_reads(csv_paths, registry: int, test: int, algo_label: str) -> tupl
 
 def main():
     p = argparse.ArgumentParser(description="Aggregate Table 1 into a single CSV.")
-    p.add_argument("--output-dir", type=Path, required=True,
-                   help="Raw profiling output root (e.g. /home/user/tt-metal/profiles_paper_table1)")
-    p.add_argument("--dram-dir", type=Path, required=True,
-                   help="Dir containing dram_reads_table1_{sparse,triangular}_cases.csv")
+    p.add_argument(
+        "--output-dir",
+        type=Path,
+        required=True,
+        help="Raw profiling output root (e.g. $TT_METAL_HOME/profiles_paper_table1)",
+    )
+    p.add_argument(
+        "--dram-dir", type=Path, required=True, help="Dir containing dram_reads_table1_{sparse,triangular}_cases.csv"
+    )
     p.add_argument("--out-csv", type=Path, required=True)
     args = p.parse_args()
 
@@ -87,29 +108,40 @@ def main():
             in0, in1 = sum_dram_reads(dram_csvs, reg, test, dram_prefix)
             if tflops is None or in0 is None:
                 missing += 1
-            rows.append({
-                "case":       case_label,
-                "registry":   reg,
-                "test":       test,
-                "block_size": block_size,
-                "density":    density,
-                "algorithm":  algo_label,
-                "in0_reads":  in0,
-                "in1_reads":  in1,
-                "tflops":     tflops,
-            })
+            rows.append(
+                {
+                    "case": case_label,
+                    "registry": reg,
+                    "test": test,
+                    "block_size": block_size,
+                    "density": density,
+                    "algorithm": algo_label,
+                    "in0_reads": in0,
+                    "in1_reads": in1,
+                    "tflops": tflops,
+                }
+            )
 
     args.out_csv.parent.mkdir(parents=True, exist_ok=True)
     with open(args.out_csv, "w", newline="") as f:
-        w = csv.DictWriter(f, fieldnames=[
-            "case", "registry", "test", "block_size", "density",
-            "algorithm", "in0_reads", "in1_reads", "tflops",
-        ])
+        w = csv.DictWriter(
+            f,
+            fieldnames=[
+                "case",
+                "registry",
+                "test",
+                "block_size",
+                "density",
+                "algorithm",
+                "in0_reads",
+                "in1_reads",
+                "tflops",
+            ],
+        )
         w.writeheader()
         w.writerows(rows)
 
-    print(f"Wrote {len(rows)} rows to {args.out_csv}" +
-          (f" ({missing} missing cells)" if missing else ""))
+    print(f"Wrote {len(rows)} rows to {args.out_csv}" + (f" ({missing} missing cells)" if missing else ""))
     sys.exit(0 if missing == 0 else 1)
 
 

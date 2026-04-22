@@ -38,11 +38,16 @@ void export_to_csv(int host_code_num, int test_num, ProfileCaseFunctionPtr *Regi
     std::string test_file_name = test_name + disabled_zones;
 
     char buf[1000];
-    size_t n = sprintf(buf, "/home/user/tt-metal/%s/traces/%s/%s/", output_subdir.c_str(), registry_name.c_str(), host_function_name.c_str());
+    const char* tt_metal_home = std::getenv("TT_METAL_HOME");
+    if (!tt_metal_home) {
+        std::cerr << "TT_METAL_HOME must be set" << std::endl;
+        std::exit(1);
+    }
+    size_t n = sprintf(buf, "%s/%s/traces/%s/%s/", tt_metal_home, output_subdir.c_str(), registry_name.c_str(), host_function_name.c_str());
     std::string trace_directory(buf, n);
     std::string trace_file_location = trace_directory + test_file_name + ".tracy";
 
-    n = sprintf(buf, "/home/user/tt-metal/%s/csvs/%s/%s/", output_subdir.c_str(), registry_name.c_str(), host_function_name.c_str());
+    n = sprintf(buf, "%s/%s/csvs/%s/%s/", tt_metal_home, output_subdir.c_str(), registry_name.c_str(), host_function_name.c_str());
     std::string csv_directory(buf);
     std::string csv_file_location = csv_directory + test_file_name + ".csv";
 
@@ -81,8 +86,8 @@ void export_to_csv(int host_code_num, int test_num, ProfileCaseFunctionPtr *Regi
     os_d << "Dimensions: " << d.H << " x " << d.W << std::endl;
 
     // Compute device TFLOPs via profiler log.
-    // Path is relative to the working dir that rahmy binaries are invoked from (repo root).
-    n = sprintf(buf, "python tt_metal/programming_examples/rahmy/SC26_submission/GEMM_profiling/read_sddmm_profiler.py --nblocks %zu --R %zu --C %zu --N %zu --M %zu --K %zu >> %s ",
+    // Path is relative to the working dir that block_sparse binaries are invoked from (repo root).
+    n = sprintf(buf, "python tt_metal/programming_examples/Tenstorrent-WH-BlockSpMM/GEMM_profiling/read_sddmm_profiler.py --nblocks %zu --R %zu --C %zu --N %zu --M %zu --K %zu >> %s ",
                 mask.nblocks, mask.R, mask.C, mask.W, mask.H, c.W, mask_log_file.c_str());
     std::string python_TFLOPs_command(buf);
     std::system(python_TFLOPs_command.c_str());

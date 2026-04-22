@@ -4,9 +4,9 @@
 #include "debug/dprint.h"
 #include "hostdevcommon/kernel_structs.h"
 #include <tools/profiler/kernel_profiler.hpp>
-#include "tt_metal/programming_examples/rahmy/SC26_submission/block_spmm/kernels/common/spmm_reader_common.hpp"
-#include "tt_metal/programming_examples/rahmy/SC26_submission/block_spmm/kernels/common/spmm_tile_ops.hpp"
-#include "tt_metal/programming_examples/rahmy/SC26_submission/block_spmm/kernels/common/spmm_indexing.hpp"
+#include "tt_metal/programming_examples/Tenstorrent-WH-BlockSpMM/block_spmm/kernels/common/spmm_reader_common.hpp"
+#include "tt_metal/programming_examples/Tenstorrent-WH-BlockSpMM/block_spmm/kernels/common/spmm_tile_ops.hpp"
+#include "tt_metal/programming_examples/Tenstorrent-WH-BlockSpMM/block_spmm/kernels/common/spmm_indexing.hpp"
 
 // Ablation skip flags (set to 1 via CreateKernel defines to skip that phase)
 #ifndef SKIP_IN0_DRAM_READ

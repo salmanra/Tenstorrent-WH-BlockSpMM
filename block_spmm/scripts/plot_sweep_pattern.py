@@ -7,8 +7,8 @@ import csv
 import matplotlib.pyplot as plt
 import numpy as np
 
-DDA_ROOT = "/home/user/tt-metal/profiles_sc26_april5/csvs"
-GPU_DIR = "/home/user/tt-metal/tt_metal/programming_examples/rahmy/gpu-normalized"
+DDA_ROOT = "${TT_METAL_HOME}/profiles_sc26_april5/csvs"
+GPU_DIR = "${TT_METAL_HOME}/tt_metal/programming_examples/block_sparse/gpu-normalized"
 OUT_DIR = os.path.join(os.path.dirname(__file__), "figures")
 DDA_HC = "bsr_spmm_multicore_snfin0_cdain1"
 
@@ -18,29 +18,45 @@ PATTERN_COLORS = ["#d62728", "#1f77b4", "#9467bd", "#2ca02c"]
 
 # Block size → (GPU csv filename, list of (density_label, registry_name))
 AXES = [
-    ("32×32", "sweep_pattern_32.csv", [
-        ("0.003%", "PatternUltra32_30"),
-        ("0.03%",  "PatternUltra32_300"),
-        ("0.3%",   "PatternUltra32_3000"),
-    ]),
-    ("64×64", "sweep_pattern_64.csv", [
-        ("0.006%", "PatternUltra64_60"),
-        ("0.06%",  "PatternUltra64_600"),
-        ("0.6%",   "PatternUltra64_6000"),
-        ("1%",     "PatternUltra64_10000"),
-    ]),
-    ("128×128", "sweep_pattern_128.csv", [
-        ("5%",  "PatternD5_128"),
-        ("10%", "PatternD10_128"),
-        ("25%", "PatternD25_128"),
-        ("50%", "PatternD50_128"),
-    ]),
-    ("256×256", "sweep_pattern_256.csv", [
-        ("5%",  "PatternD5"),
-        ("10%", "PatternD10"),
-        ("25%", "PatternD25"),
-        ("50%", "PatternD50"),
-    ]),
+    (
+        "32×32",
+        "sweep_pattern_32.csv",
+        [
+            ("0.003%", "PatternUltra32_30"),
+            ("0.03%", "PatternUltra32_300"),
+            ("0.3%", "PatternUltra32_3000"),
+        ],
+    ),
+    (
+        "64×64",
+        "sweep_pattern_64.csv",
+        [
+            ("0.006%", "PatternUltra64_60"),
+            ("0.06%", "PatternUltra64_600"),
+            ("0.6%", "PatternUltra64_6000"),
+            ("1%", "PatternUltra64_10000"),
+        ],
+    ),
+    (
+        "128×128",
+        "sweep_pattern_128.csv",
+        [
+            ("5%", "PatternD5_128"),
+            ("10%", "PatternD10_128"),
+            ("25%", "PatternD25_128"),
+            ("50%", "PatternD50_128"),
+        ],
+    ),
+    (
+        "256×256",
+        "sweep_pattern_256.csv",
+        [
+            ("5%", "PatternD5"),
+            ("10%", "PatternD10"),
+            ("25%", "PatternD25"),
+            ("50%", "PatternD50"),
+        ],
+    ),
 ]
 
 
@@ -90,12 +106,26 @@ def registry_to_gpu_index(registry_name):
     """Map registry name to the index used in the GPU CSV Registry column."""
     # The GPU CSVs use the profiling_suite.hpp registry indices
     name_to_idx = {
-        "PatternD5": 2, "PatternD10": 3, "PatternD25": 4, "PatternD50": 5,
-        "PatternD5_128": 13, "PatternD10_128": 14, "PatternD25_128": 15, "PatternD50_128": 16,
-        "PatternUltra32_30": 17, "PatternUltra32_100": 18, "PatternUltra32_300": 19,
-        "PatternUltra32_1000": 20, "PatternUltra32_3000": 21, "PatternUltra32_10000": 22,
-        "PatternUltra64_60": 23, "PatternUltra64_200": 24, "PatternUltra64_600": 25,
-        "PatternUltra64_2000": 26, "PatternUltra64_6000": 27, "PatternUltra64_10000": 28,
+        "PatternD5": 2,
+        "PatternD10": 3,
+        "PatternD25": 4,
+        "PatternD50": 5,
+        "PatternD5_128": 13,
+        "PatternD10_128": 14,
+        "PatternD25_128": 15,
+        "PatternD50_128": 16,
+        "PatternUltra32_30": 17,
+        "PatternUltra32_100": 18,
+        "PatternUltra32_300": 19,
+        "PatternUltra32_1000": 20,
+        "PatternUltra32_3000": 21,
+        "PatternUltra32_10000": 22,
+        "PatternUltra64_60": 23,
+        "PatternUltra64_200": 24,
+        "PatternUltra64_600": 25,
+        "PatternUltra64_2000": 26,
+        "PatternUltra64_6000": 27,
+        "PatternUltra64_10000": 28,
     }
     return name_to_idx.get(registry_name)
 
@@ -104,8 +134,8 @@ def plot_figure(axes_specs, title, out_name):
     """Group by pattern; bars touch within each group; densities labelled below."""
     n_axes = len(axes_specs)
 
-    BAR_WIDTH = 1.0     # bars touch (width = unit step within group)
-    PATTERN_GAP = 4.0   # gap of 4 bar-widths between adjacent pattern groups
+    BAR_WIDTH = 1.0  # bars touch (width = unit step within group)
+    PATTERN_GAP = 4.0  # gap of 4 bar-widths between adjacent pattern groups
 
     # Width is set by the WIDEST single axis (axes are stacked vertically)
     units_per_axis = []
@@ -140,47 +170,73 @@ def plot_figure(axes_specs, title, out_name):
                 gpu_val = gpu_data.get((gpu_reg_idx, pat), 0) if gpu_reg_idx is not None else 0
 
                 # DDA: white fill, dotted hatch
-                ax.bar(dda_x, dda_val, BAR_WIDTH,
-                       facecolor="white", edgecolor="black", linewidth=1.2,
-                       hatch=".",
-                       label="DDA" if (p_idx == 0 and d_idx == 0) else None)
+                ax.bar(
+                    dda_x,
+                    dda_val,
+                    BAR_WIDTH,
+                    facecolor="white",
+                    edgecolor="black",
+                    linewidth=1.2,
+                    hatch=".",
+                    label="DDA" if (p_idx == 0 and d_idx == 0) else None,
+                )
                 # GPU: white fill, diagonal hatch
-                ax.bar(gpu_x, gpu_val, BAR_WIDTH,
-                       facecolor="white", edgecolor="black", linewidth=1.2,
-                       hatch="////",
-                       label="GPU" if (p_idx == 0 and d_idx == 0) else None)
+                ax.bar(
+                    gpu_x,
+                    gpu_val,
+                    BAR_WIDTH,
+                    facecolor="white",
+                    edgecolor="black",
+                    linewidth=1.2,
+                    hatch="////",
+                    label="GPU" if (p_idx == 0 and d_idx == 0) else None,
+                )
 
                 # Density label southwest from the pair center, anchored at top-right
                 pair_center = group_left + (2 * d_idx + 1) * BAR_WIDTH
-                ax.text(pair_center, -0.01, density_label,
-                        ha="right", va="top", rotation=45, rotation_mode="anchor",
-                        fontsize=24, transform=ax.get_xaxis_transform())
+                ax.text(
+                    pair_center,
+                    -0.01,
+                    density_label,
+                    ha="right",
+                    va="top",
+                    rotation=45,
+                    rotation_mode="anchor",
+                    fontsize=24,
+                    transform=ax.get_xaxis_transform(),
+                )
 
         # Pattern labels manually placed just below the density labels
         ax.set_xticks([])
         for p_idx, pattern_label in enumerate(PATTERN_LABELS):
             group_center = p_idx * pattern_spacing + bars_per_group * BAR_WIDTH / 2
-            ax.text(group_center, -0.28, pattern_label,
-                    ha="center", va="top", fontsize=32, fontweight="bold",
-                    transform=ax.get_xaxis_transform())
+            ax.text(
+                group_center,
+                -0.28,
+                pattern_label,
+                ha="center",
+                va="top",
+                fontsize=32,
+                fontweight="bold",
+                transform=ax.get_xaxis_transform(),
+            )
 
         ax.set_title(f"R=C={block_label}", fontsize=36)
-        ax.grid(axis='y', alpha=0.3)
-        ax.tick_params(axis='y', labelsize=28)
+        ax.grid(axis="y", alpha=0.3)
+        ax.tick_params(axis="y", labelsize=28)
 
         ax.set_ylabel("TFLOP/s", fontsize=34)
 
         if ax_idx == 0:
-            ax.legend(loc='upper left', fontsize=28, framealpha=0.9)
-        ax.set_xlim(-BAR_WIDTH,
-                    len(PATTERNS) * pattern_spacing - PATTERN_GAP + BAR_WIDTH)
+            ax.legend(loc="upper left", fontsize=28, framealpha=0.9)
+        ax.set_xlim(-BAR_WIDTH, len(PATTERNS) * pattern_spacing - PATTERN_GAP + BAR_WIDTH)
 
     fig.subplots_adjust(top=0.88, bottom=0.06, hspace=0.55)
     fig.suptitle(title, fontsize=36, y=0.96)
 
     out_path = os.path.join(OUT_DIR, out_name)
     os.makedirs(OUT_DIR, exist_ok=True)
-    fig.savefig(out_path, dpi=150, bbox_inches='tight', pad_inches=0.3)
+    fig.savefig(out_path, dpi=150, bbox_inches="tight", pad_inches=0.3)
     print(f"Saved {out_path}")
     plt.close(fig)
 

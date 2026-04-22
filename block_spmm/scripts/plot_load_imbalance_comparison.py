@@ -13,6 +13,7 @@ import sys
 from pathlib import Path
 
 import matplotlib
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
@@ -83,20 +84,38 @@ def plot_one(ax, lower_vals, upper_vals, test_case, ylim):
     bar_width = 0.3
     x = np.arange(n_algos)
 
-    bars_lo = ax.bar(x - bar_width / 2, lower_vals, bar_width,
-                     color=TRI_COLORS["lower"], edgecolor="white", linewidth=0.5,
-                     label="Lower-Triangular")
-    bars_up = ax.bar(x + bar_width / 2, upper_vals, bar_width,
-                     color=TRI_COLORS["upper"], edgecolor="white", linewidth=0.5,
-                     label="Upper-Triangular")
+    bars_lo = ax.bar(
+        x - bar_width / 2,
+        lower_vals,
+        bar_width,
+        color=TRI_COLORS["lower"],
+        edgecolor="white",
+        linewidth=0.5,
+        label="Lower-Triangular",
+    )
+    bars_up = ax.bar(
+        x + bar_width / 2,
+        upper_vals,
+        bar_width,
+        color=TRI_COLORS["upper"],
+        edgecolor="white",
+        linewidth=0.5,
+        label="Upper-Triangular",
+    )
 
     for bars in (bars_lo, bars_up):
         for bar in bars:
             val = bar.get_height()
             if val > 0:
-                ax.text(bar.get_x() + bar.get_width() / 2, val + 0.2,
-                        f"{val:.1f}", ha="center", va="bottom",
-                        fontsize=10, fontweight="bold")
+                ax.text(
+                    bar.get_x() + bar.get_width() / 2,
+                    val + 0.2,
+                    f"{val:.1f}",
+                    ha="center",
+                    va="bottom",
+                    fontsize=10,
+                    fontweight="bold",
+                )
 
     algo_labels = [label for _, label in ALGORITHMS]
     ax.set_xticks(x)
@@ -110,16 +129,15 @@ def plot_one(ax, lower_vals, upper_vals, test_case, ylim):
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Compare algorithms on lower- vs upper-triangular matrices")
+    parser = argparse.ArgumentParser(description="Compare algorithms on lower- vs upper-triangular matrices")
     parser.add_argument(
         "--lower-dir",
-        default="/home/user/tt-metal/profiles_load_imbalance_V2/csvs",
+        default="${TT_METAL_HOME}/profiles_load_imbalance_V2/csvs",
         help="Root CSV directory for lower-triangular experiments",
     )
     parser.add_argument(
         "--upper-dir",
-        default="/home/user/tt-metal/profiles_load_imbalance_upper_V2/csvs",
+        default="${TT_METAL_HOME}/profiles_load_imbalance_upper_V2/csvs",
         help="Root CSV directory for upper-triangular experiments",
     )
     args = parser.parse_args()
@@ -146,8 +164,7 @@ def main():
     for ax, tc, (lo, up) in zip(axes, TEST_CASES, case_values):
         plot_one(ax, lo, up, tc, shared_ylim)
 
-    fig.suptitle("Lower- vs Upper-Triangular: Naive, SnF, DDA (Load-Balanced)",
-                 fontsize=14, fontweight="bold")
+    fig.suptitle("Lower- vs Upper-Triangular: Naive, SnF, DDA (Load-Balanced)", fontsize=14, fontweight="bold")
     fig.tight_layout()
     output_path = figures_dir / "load_imbalance_comparison.png"
     fig.savefig(output_path, dpi=200, bbox_inches="tight")

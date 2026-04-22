@@ -24,10 +24,13 @@ import csv
 
 import plot_sweep_pattern
 from plot_sweep_pattern import (
-    AXES, DDA_HC, classify_pattern, plot_figure,
+    AXES,
+    DDA_HC,
+    classify_pattern,
+    plot_figure,
 )
 
-DDA_ROOT = "/home/user/tt-metal/profiles_sc26_april5/csvs"
+DDA_ROOT = "${TT_METAL_HOME}/profiles_sc26_april5/csvs"
 HOST_LOOP_ITERATIONS = 10
 
 
@@ -43,7 +46,7 @@ def parse_dda_host_tflops(registry_name):
             continue
         pat = classify_pattern(f)
         sparse_log = os.path.join(d, f)
-        host_csv = os.path.join(d, f[:-len("_sparse.log")] + ".csv")
+        host_csv = os.path.join(d, f[: -len("_sparse.log")] + ".csv")
 
         # Total FLOPs from the sparse log
         total_flops = None

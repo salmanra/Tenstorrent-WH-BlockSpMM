@@ -80,7 +80,12 @@ TestResult run_test(
     host_func(a, b, output, false, nblocks, M, N, K, R, C, 1, device);
 
     if (emit_output) {
-        std::string local_path = "/home/user/tt-metal/tt_metal/programming_examples/rahmy/SC26_submission/block_spmm/" + test_name;
+        const char* tt_metal_home = std::getenv("TT_METAL_HOME");
+        if (!tt_metal_home) {
+            TT_THROW("TT_METAL_HOME must be set");
+        }
+        std::string local_path = std::string(tt_metal_home) +
+            "/tt_metal/programming_examples/Tenstorrent-WH-BlockSpMM/block_spmm/" + test_name;
 
         std::filesystem::create_directory(local_path);
         std::string output_file = local_path + "/output.txt";
@@ -304,7 +309,7 @@ int main(int argc, char** argv) {
         host_code_index = std::stoi(argv[2]);
     }
 
-    // Registry selection: use SC26 profiling_suite Registries, or fall back to TestRegistry
+    // Registry selection: use BlockSpMM profiling_suite Registries, or fall back to TestRegistry
     int registry_number = argc > 3 ? std::stoi(argv[3]) : -1;
     TestFunctionPtr *registry = nullptr;
     size_t num_tests = 0;

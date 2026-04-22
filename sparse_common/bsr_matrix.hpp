@@ -271,7 +271,7 @@ public:
                             float temp = ((k / C) == (k % C)) ? 1.0 : 0.0;
                             T val = static_cast<T>(temp);
                             switch (content) {
-                                case RAND: 
+                                case RAND:
                                     data.push_back(static_cast<T>(SIGNED_RAND_MAX - rand()) / static_cast<T>(RAND_DENOM));
                                     break;
                                 case UNIFORM:
@@ -298,7 +298,7 @@ public:
                             float temp = ((k / C) == (k % C)) ? 1.0 : 0.0;
                             T val = static_cast<T>(temp);
                             switch (content) {
-                                case RAND: 
+                                case RAND:
                                     data.push_back(static_cast<T>(SIGNED_RAND_MAX - rand()) / static_cast<T>(RAND_DENOM));
                                     break;
                                 case UNIFORM:
@@ -656,7 +656,7 @@ public:
                     float temp = ((k / C) == (k % C)) ? 1.0 : 0.0;
                     T val = static_cast<T>(temp);
                     switch (content) {
-                        case RAND: 
+                        case RAND:
                             data.push_back(static_cast<T>(SIGNED_RAND_MAX - rand()) / static_cast<T>(RAND_DENOM));
                             break;
                         case UNIFORM:

@@ -70,9 +70,9 @@ def main():
 
     # Compute reference values for utilization
     # SDDMM: A = B . (C x D), each nonzero block computes R x C sub-block of (C x D)
-    # Per-block matmul: C_rows(R x K) * D_cols(K x C) => 2*R*C*K FLOPs + R*C (eltwise mul at the end) 
+    # Per-block matmul: C_rows(R x K) * D_cols(K x C) => 2*R*C*K FLOPs + R*C (eltwise mul at the end)
     R, C, K, nblocks = args.R, args.C, args.K, args.nblocks
-    total_flops = 2 * nblocks * R * C * K + nblocks * R * C 
+    total_flops = 2 * nblocks * R * C * K + nblocks * R * C
     # Ideal cycles: each tile matmul is (R/32) * (C/32) * (K/32) tiles per block,
     # times nblocks, divided across cores
     LoFi_cycle = 16
@@ -105,7 +105,7 @@ def main():
                 continue
             series = risc_data["analysis"][analysis_key]["series"]
             # Skip warmup invocations, keep the rest
-            for entry in series[args.warmup:]:
+            for entry in series[args.warmup :]:
                 all_durations.append(entry["duration_cycles"])
 
     if all_durations:
@@ -134,7 +134,9 @@ def main():
         for key in other_keys:
             stats = device_analysis[key]["stats"]
             avg_cycles = stats["Average"]
-            print(f"    {key}: avg {avg_cycles:.0f} cycles ({avg_cycles / device_freq / 1e3:.3f} ms), count={stats['Count']:.0f}")
+            print(
+                f"    {key}: avg {avg_cycles:.0f} cycles ({avg_cycles / device_freq / 1e3:.3f} ms), count={stats['Count']:.0f}"
+            )
 
 
 if __name__ == "__main__":

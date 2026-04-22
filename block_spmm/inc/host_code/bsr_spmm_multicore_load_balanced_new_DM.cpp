@@ -292,8 +292,8 @@ void bsr_spmm_multicore_load_balanced_new_DM_impl(
         (std::uint32_t)num_iters_x,
     };
 
-    
-    
+
+
     // Create Kernels
     auto zone_defines = spmm_zone_config::get_zone_defines();
     bool skip_load_balance = extra_defines.count("SKIP_LOAD_BALANCE") > 0;
@@ -306,7 +306,7 @@ void bsr_spmm_multicore_load_balanced_new_DM_impl(
     auto noc_riscv_1 = transpose_NoCs ? NOC::RISCV_0_default : NOC::RISCV_1_default;
     auto reader_in0_id = tt_metal::CreateKernel(
         program,
-        "tt_metal/programming_examples/rahmy/SC26_submission/block_spmm/kernels/dataflow/reader_in0_naive.cpp",
+        "tt_metal/programming_examples/Tenstorrent-WH-BlockSpMM/block_spmm/kernels/dataflow/reader_in0_naive.cpp",
         all_cores,
         tt_metal::DataMovementConfig{
             .processor = DataMovementProcessor::RISCV_0,
@@ -316,7 +316,7 @@ void bsr_spmm_multicore_load_balanced_new_DM_impl(
 
     auto reader_in1_id = tt_metal::CreateKernel(
         program,
-        "tt_metal/programming_examples/rahmy/SC26_submission/block_spmm/kernels/dataflow/reader_in1_naive.cpp",
+        "tt_metal/programming_examples/Tenstorrent-WH-BlockSpMM/block_spmm/kernels/dataflow/reader_in1_naive.cpp",
         all_cores,
         tt_metal::DataMovementConfig{
             .processor = DataMovementProcessor::RISCV_1,
@@ -327,7 +327,7 @@ void bsr_spmm_multicore_load_balanced_new_DM_impl(
     // Create compute kernel
     auto mm_kernel_id = tt_metal::CreateKernel(
         program,
-        "tt_metal/programming_examples/rahmy/SC26_submission/block_spmm/kernels/compute/bmm_iter.cpp",
+        "tt_metal/programming_examples/Tenstorrent-WH-BlockSpMM/block_spmm/kernels/compute/bmm_iter.cpp",
         all_cores,
         tt_metal::ComputeConfig{.math_fidelity = math_fidelity,
                                 .compile_args = compute_kernel_compile_time_args,

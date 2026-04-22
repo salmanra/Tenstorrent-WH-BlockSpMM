@@ -1,10 +1,10 @@
 // simplest thing we can make: take the sparse_mcast host code and fill it in with SnF kernels
 //     ignore transposing
 
-// if we adapt it from the tt metal example, 
+// if we adapt it from the tt metal example,
 //     it's all the same except we transpose
 
-// yeah it's probably worth transposing. 
+// yeah it's probably worth transposing.
 // Still just SnF on the sparse matrix tho
 
 
@@ -48,7 +48,7 @@ void bsr_spmm_multicore_snf_impl(
     // auto in1_noc = transpose_core_grid ? small_input_noc : large_input_noc;
     // auto in1_risc = transpose_core_grid ? small_input_risc : large_input_risc;
     // uint32_t in1_parallel_axis_cores = transpose_core_grid ? grid_size.y : grid_size.x;
-    
+
 
     CommandQueue& cq = device->command_queue();
     Program program{};
@@ -70,7 +70,7 @@ void bsr_spmm_multicore_snf_impl(
     dram_buffer_col_indices_size = indexing_data_single_tile_size * ((indexing_data_single_tile_size - 1 + dram_buffer_col_indices_size) / (indexing_data_single_tile_size));
 
     uint32_t num_tiles_for_output_y_indices = 0;
-    uint32_t num_tiles_for_col_indices = dram_buffer_col_indices_size / indexing_data_single_tile_size; 
+    uint32_t num_tiles_for_col_indices = dram_buffer_col_indices_size / indexing_data_single_tile_size;
     uint32_t num_tiles_for_indptr = dram_buffer_indptr_size / indexing_data_single_tile_size;
     uint32_t num_tiles_indexing = num_tiles_for_col_indices + num_tiles_for_indptr + num_tiles_for_output_y_indices;
 
@@ -173,12 +173,12 @@ void bsr_spmm_multicore_snf_impl(
     CoreRange in0_injector_cores(
         {(std::size_t)start_core_x, (std::size_t)start_core_y},
         {(std::size_t)start_core_x, (std::size_t)start_core_y + num_cores_r - 1});
-    
+
     uint32_t column_offset = num_cores_c > 1 ? num_cores_c : num_cores_c + 1;
     CoreRange in0_receiver_cores(
         {(std::size_t)start_core_x + 1, (std::size_t)start_core_y},
         {(std::size_t)start_core_x + column_offset - 1, (std::size_t)start_core_y + num_cores_r - 1});
-    
+
     // may not end up using these
     CoreRange top_row(
         {(std::size_t)start_core_x, (std::size_t)start_core_y},
@@ -196,7 +196,7 @@ void bsr_spmm_multicore_snf_impl(
         log_info(tt::LogVerif, "in0 receiver cores {}, used? {}", in0_receiver_cores, num_cores_c > 1);
     }
 
-    
+
     auto in0_sender_semaphore_id = tt::tt_metal::CreateSemaphore(program, all_cores, INVALID);
     auto in0_receiver_semaphore_id = tt::tt_metal::CreateSemaphore(program, all_cores, INVALID);
     auto in1_sender_semaphore_id = tt::tt_metal::CreateSemaphore(program, all_cores, INVALID);
@@ -322,17 +322,17 @@ void bsr_spmm_multicore_snf_impl(
     // Use full buffer size as page_size so noc_async_read can transfer the entire buffer
     auto cb_indptr = MakeCircularBuffer(program, all_cores, indptr_cb_index, dram_buffer_indptr_size, indexing_data_single_tile_size, indexing_data_format);
 
-    
-    /* 
+
+    /*
         Compile-time arguments.
 
         Start answering questions about what you want your two DM kernels to do.
-        Start coding. 
+        Start coding.
 
         Decision: follow their example, both kernels read, one writes.
-        TODO: only one kernel should read the indexing data from DRAM. 
+        TODO: only one kernel should read the indexing data from DRAM.
             - the kernel to read the indexing data should use a semaphore to let the other kernel know it's ready
-        
+
 
     */
 
@@ -371,7 +371,7 @@ void bsr_spmm_multicore_snf_impl(
         (std::uint32_t)num_tiles_for_col_indices,
         (std::uint32_t)num_tiles_for_indptr,
 
-        in0_sender_semaphore_id, 
+        in0_sender_semaphore_id,
         in0_receiver_semaphore_id,
         (std::uint32_t)true,                            // is_injector_core
         (std::uint32_t)!in1_is_writer,                  // is_output_writer
@@ -419,7 +419,7 @@ void bsr_spmm_multicore_snf_impl(
 
         (std::uint32_t)num_tiles_for_col_indices,
         (std::uint32_t)num_tiles_for_indptr,
-        in0_sender_semaphore_id, 
+        in0_sender_semaphore_id,
         in0_receiver_semaphore_id,
         (std::uint32_t)false,                    // is_injector_core
         (std::uint32_t)!in1_is_writer,           // is_output_writer
@@ -514,7 +514,7 @@ void bsr_spmm_multicore_snf_impl(
 
     auto compute_id = tt_metal::CreateKernel(
         program,
-        "tt_metal/programming_examples/rahmy/SC26_submission/block_spmm/kernels/compute/bmm_iter.cpp",
+        "tt_metal/programming_examples/Tenstorrent-WH-BlockSpMM/block_spmm/kernels/compute/bmm_iter.cpp",
         all_cores,
         tt_metal::ComputeConfig{
             .math_fidelity = math_fidelity,
@@ -524,7 +524,7 @@ void bsr_spmm_multicore_snf_impl(
 
     auto in1_reader_id = tt_metal::CreateKernel(
         program,
-        "tt_metal/programming_examples/rahmy/SC26_submission/block_spmm/kernels/dataflow/reader_snf_in1_reader.cpp",
+        "tt_metal/programming_examples/Tenstorrent-WH-BlockSpMM/block_spmm/kernels/dataflow/reader_snf_in1_reader.cpp",
         all_cores,
         tt_metal::DataMovementConfig{
             .processor = DataMovementProcessor::RISCV_1,
@@ -535,7 +535,7 @@ void bsr_spmm_multicore_snf_impl(
 
     auto in0_injector_and_writer_id = tt_metal::CreateKernel(
         program,
-        "tt_metal/programming_examples/rahmy/SC26_submission/block_spmm/kernels/dataflow/reader_snf_in0_reader.cpp",
+        "tt_metal/programming_examples/Tenstorrent-WH-BlockSpMM/block_spmm/kernels/dataflow/reader_snf_in0_reader.cpp",
         in0_injector_cores,
         tt_metal::DataMovementConfig{
             .processor = DataMovementProcessor::RISCV_0,
@@ -550,7 +550,7 @@ void bsr_spmm_multicore_snf_impl(
         }
         in0_receiver_and_writer_id = tt_metal::CreateKernel(
             program,
-            "tt_metal/programming_examples/rahmy/SC26_submission/block_spmm/kernels/dataflow/reader_snf_in0_reader.cpp",
+            "tt_metal/programming_examples/Tenstorrent-WH-BlockSpMM/block_spmm/kernels/dataflow/reader_snf_in0_reader.cpp",
             in0_receiver_cores,
             tt_metal::DataMovementConfig{
                 .processor = DataMovementProcessor::RISCV_0,
@@ -702,7 +702,7 @@ void bsr_spmm_multicore_snf_impl(
             in0_snf_reader_runtime_args.push_back((std::uint32_t)in0_next_core_physical.y);
             in0_snf_reader_runtime_args.push_back((std::uint32_t)in0_prev_core_physical.x);
             in0_snf_reader_runtime_args.push_back((std::uint32_t)in0_prev_core_physical.y);
-            
+
             in0_snf_reader_runtime_args.push_back(is_sink_core);
 
             if (is_injector_core){
@@ -724,7 +724,7 @@ void bsr_spmm_multicore_snf_impl(
                 for (size_t arg_idx = 0; arg_idx < in0_snf_reader_runtime_args.size(); arg_idx++){
                     log_info(tt::LogVerif, "arg {} : {}", arg_idx, in0_snf_reader_runtime_args[arg_idx]);
                 }
-            } 
+            }
             tt_metal::SetRuntimeArgs(program, in1_reader_id, core, in1_reader_runtime_args);
             tt_metal::SetRuntimeArgs(program, compute_id, core, compute_runtime_args);
         }
@@ -760,7 +760,7 @@ void bsr_spmm_multicore_snf_impl(
 
     if constexpr (verbose)
         log_info(tt::LogVerif, " -- Program returned --");
-    
+
     if constexpr (!is_profiling){
         uint32_t nonzero_row_index = 0;
         for (size_t row_index = 0; row_index < a.indptr.size() - 1; row_index++) {

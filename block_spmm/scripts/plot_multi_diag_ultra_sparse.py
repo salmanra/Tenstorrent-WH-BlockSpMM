@@ -12,6 +12,7 @@ import sys
 from pathlib import Path
 
 import matplotlib
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
@@ -45,11 +46,10 @@ def extract_tflops(log_path):
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Plot multi_diag ultra-sparse throughput")
+    parser = argparse.ArgumentParser(description="Plot multi_diag ultra-sparse throughput")
     parser.add_argument(
         "--data-dir",
-        default="/home/user/tt-metal/profiles_multi_diag_ultra_sparse/csvs",
+        default="${TT_METAL_HOME}/profiles_multi_diag_ultra_sparse/csvs",
         help="Root CSV directory",
     )
     args = parser.parse_args()
@@ -81,7 +81,10 @@ def main():
                 bar.get_x() + bar.get_width() / 2,
                 bar.get_height() + 0.3,
                 f"{val:.1f}",
-                ha="center", va="bottom", fontsize=10, fontweight="bold",
+                ha="center",
+                va="bottom",
+                fontsize=10,
+                fontweight="bold",
             )
 
     ax.set_xticks(x)

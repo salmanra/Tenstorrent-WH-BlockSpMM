@@ -13,6 +13,7 @@ import sys
 from pathlib import Path
 
 import matplotlib
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
@@ -80,7 +81,10 @@ def plot_one(ax, values, test_case, ylim):
                 bar.get_x() + bar.get_width() / 2,
                 bar.get_height() + 0.3,
                 f"{val:.1f}",
-                ha="center", va="bottom", fontsize=10, fontweight="bold",
+                ha="center",
+                va="bottom",
+                fontsize=10,
+                fontweight="bold",
             )
 
     ax.set_xticks(x)
@@ -96,7 +100,7 @@ def main():
     parser = argparse.ArgumentParser(description="Plot load-imbalance experiment")
     parser.add_argument(
         "--data-dir",
-        default="/home/user/tt-metal/profiles_load_imbalance_V2/csvs",
+        default="${TT_METAL_HOME}/profiles_load_imbalance_V2/csvs",
         help="Root directory containing registry/host_code/ CSV files",
     )
     args = parser.parse_args()

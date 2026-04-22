@@ -28,12 +28,12 @@ ALGORITHMS = [
 ]
 
 ALGO_LABELS = {
-    "bsr_spmm_multicore_load_balanced_new_DM":       "Naive (LB)",
+    "bsr_spmm_multicore_load_balanced_new_DM": "Naive (LB)",
     "bsr_spmm_multicore_load_balanced_new_DM_no_lb": "Naive (no LB)",
-    "bsr_spmm_multicore_snf":                        "SnF (LB)",
-    "bsr_spmm_multicore_snf_no_lb":                  "SnF (no LB)",
-    "bsr_spmm_multicore_snfin0_cdain1":              "CDA (LB)",
-    "bsr_spmm_multicore_snfin0_cdain1_no_lb":        "CDA (no LB)",
+    "bsr_spmm_multicore_snf": "SnF (LB)",
+    "bsr_spmm_multicore_snf_no_lb": "SnF (no LB)",
+    "bsr_spmm_multicore_snfin0_cdain1": "CDA (LB)",
+    "bsr_spmm_multicore_snfin0_cdain1_no_lb": "CDA (no LB)",
 }
 
 TEST_CASES = [
@@ -85,7 +85,7 @@ def main():
     parser = argparse.ArgumentParser(description="Report host-side timing for load-imbalance experiments")
     parser.add_argument(
         "--data-dir",
-        default="/home/user/tt-metal/profiles_load_imbalance/csvs",
+        default="${TT_METAL_HOME}/profiles_load_imbalance/csvs",
         help="Root directory containing registry/host_code/ CSV files",
     )
     args = parser.parse_args()
