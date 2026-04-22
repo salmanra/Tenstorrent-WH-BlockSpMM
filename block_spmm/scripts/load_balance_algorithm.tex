@@ -1,0 +1,31 @@
+\documentclass{article}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+
+\begin{document}
+
+\begin{algorithm}
+\caption{Serpentine row balancing for BSR SpMM}
+\label{alg:snake-lb}
+\begin{algorithmic}[1]
+\Require $P$: BSR row pointers;\ \ $R$: \# core-grid rows
+\Ensure $A[0\,..\,R{-}1]$: folded-row IDs per core row
+\Statex \textbf{Symbols:} $w$ per-row work,\ $\pi$ sort permutation,\ $n{=}|w|$,\ $a$ rows done,\ $t$ pass index,\ $k,o$ counters
+\State $w \gets [\,P[i{+}1]{-}P[i] : 0{\le}i{<}|P|{-}1,\ P[i{+}1]{>}P[i]\,]$
+\State $\pi \gets \mathrm{argsort}(w)$;\ \ $n \gets |w|$;\ \ $A \gets [\,]^{R}$;\ \ $a \gets 0$;\ \ $t \gets 1$
+\While{$a < n$}
+    \State $k \gets \min(R,\,n{-}a)$ \Comment{forward: $k$ lightest}
+    \For{$c \gets 0$ \textbf{to} $k-1$}
+        \State append $\pi[R(t{-}1){+}c]$ to $A[c]$;\ \ $a \gets a{+}1$
+    \EndFor
+    \If{$a \ge n$} \State \textbf{break} \EndIf
+    \State $k \gets \min(R,\,n{-}a)$;\ \ $o \gets R-k$ \Comment{reverse: $k$ heaviest}
+    \For{$c \gets R-1$ \textbf{downto} $R-k$}
+        \State append $\pi[n{-}Rt{+}o]$ to $A[c]$;\ \ $o \gets o{+}1$;\ \ $a \gets a{+}1$
+    \EndFor
+    \State $t \gets t+1$
+\EndWhile
+\end{algorithmic}
+\end{algorithm}
+
+\end{document}

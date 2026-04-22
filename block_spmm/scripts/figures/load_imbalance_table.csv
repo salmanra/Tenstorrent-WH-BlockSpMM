@@ -1,0 +1,14 @@
+"# Section A: TFLOP/s on triangular matrices (M=N=K, R=C=256). lb_speedup = lb_tflops / no_lb_tflops."
+algorithm,variant,lower_8192_tflops,lower_4096_tflops,upper_8192_tflops,upper_4096_tflops,lower_8192_lb_speedup,lower_4096_lb_speedup,upper_8192_lb_speedup,upper_4096_lb_speedup
+Naive,LB,19.09,18.8,19.09,18.97,0.8088983050847457,0.8075601374570447,0.88997668997669,0.9442508710801393
+Naive,no-LB,23.6,23.28,21.45,20.09,,,,
+SnF,LB,40.09,38.36,40.11,38.62,0.9558893657606106,0.9662468513853903,0.8774885145482388,0.8935677926885701
+SnF,no-LB,41.94,39.7,45.71,43.22,,,,
+DDA,LB,43.31,39.51,29.6,29.51,1.468135593220339,1.242062244577177,1.189710610932476,1.1011194029850746
+DDA,no-LB,29.5,31.81,24.88,26.8,,,,
+
+"# Section B: Random 25%-density workload (M=N=K=8192, R=C=256), host-side ms / iter"
+algorithm,lb_ms,no_lb_ms,speedup_no_lb_over_lb
+Naive,18.0077817,18.271568100000003,1.0146484672234783
+SnF,9.9251177,9.658033199999998,0.9730900420455466
+DDA,7.7328577,8.3223291,1.076229438439039

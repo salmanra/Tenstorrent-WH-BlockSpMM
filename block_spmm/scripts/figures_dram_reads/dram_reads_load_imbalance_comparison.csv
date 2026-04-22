@@ -1,0 +1,13 @@
+group,registry,test,host_code,total_in0_reads,total_in1_reads
+load_imbalance,29,0,Naive,16896,16896
+load_imbalance,29,0,SnF,2112,16896
+load_imbalance,29,0,CDA,2112,2560
+load_imbalance,29,1,Naive,2176,2176
+load_imbalance,29,1,SnF,272,2176
+load_imbalance,29,1,CDA,272,384
+load_imbalance_upper,30,0,Naive,16896,16896
+load_imbalance_upper,30,0,SnF,2112,16896
+load_imbalance_upper,30,0,CDA,2112,16896
+load_imbalance_upper,30,1,Naive,2176,2176
+load_imbalance_upper,30,1,SnF,272,2176
+load_imbalance_upper,30,1,CDA,272,2176

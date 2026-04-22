@@ -1,0 +1,58 @@
+% DRAM read counts table for the DDA vs SnF section of experiments_with_numbers.txt.
+% Rows are exactly the cases cited in the narrative (18 rows = 6 cases x 3 algos).
+% Numbers extracted from:
+%   scripts/figures_dram_reads/dram_reads_mixed_sweep_d50.csv
+%   scripts/figures_dram_reads/dram_reads_mixed_sweep_d06.csv
+%   scripts/figures_dram_reads/dram_reads_multi_diag_ultra_sparse.csv
+%   scripts/figures_dram_reads/dram_reads_load_imbalance_comparison.csv (test=0, 8192)
+% TFLOP/s values come from the sparse.log files visualized in:
+%   mixed_sweep_d50.png, mixed_sweep_d06.png, multi_diag_ultra_sparse.png,
+%   load_imbalance_comparison.png
+%
+% Requires: \usepackage{booktabs} \usepackage{multirow}
+% Style as you wish; this is the minimal cleanly-formatted starting point.
+
+\begin{table}[t]
+\centering
+\caption{Per-case DRAM read counts and host-side throughput on Wormhole N150.
+Read counts are summed across all 64 Tensix cores; ``in0'' is the sparse-matrix
+input, ``in1'' is the dense-matrix input. All experiments use $M=N=K=8192$.
+The triangular cases use a fully-dense lower- or upper-triangular block
+pattern; the others use the indicated block-density $d$.}
+\label{tab:dda-vs-snf-dram-reads}
+\begin{tabular}{llrrr}
+\toprule
+Case & Algorithm & in0 reads & in1 reads & TFLOP/s \\
+\midrule
+\multirow{3}{*}{Row, $R{=}C{=}256$, $d{=}25\%$}
+  & Naive & 8{,}192 & 8{,}192 & 21.8 \\
+  & SnF   & 1{,}024 & 8{,}192 & 39.8 \\
+  & DDA   & 1{,}024 & 1{,}024 & \textbf{50.6} \\
+\midrule
+\multirow{3}{*}{Multi-diag, $R{=}C{=}256$, $d{=}50\%$}
+  & Naive & 16{,}384 & 16{,}384 & 19.2 \\
+  & SnF   & 2{,}048  & 16{,}384 & \textbf{39.9} \\
+  & DDA   & 2{,}048  & 13{,}856 & 34.7 \\
+\midrule
+\multirow{3}{*}{Row, $R{=}C{=}64$, $d{=}0.6\%$}
+  & Naive & 784 & 784 & 5.4 \\
+  & SnF   & 98  & 784 & 5.4 \\
+  & DDA   & 98  & 784 & 5.5 \\
+\midrule
+\multirow{3}{*}{Multi-diag, $R{=}C{=}64$, $d{=}0.6\%$}
+  & Naive & 784 & 784 & \textbf{8.2} \\
+  & SnF   & 98  & 784 & 7.8 \\
+  & DDA   & 98  & 784 & 6.2 \\
+\midrule
+\multirow{3}{*}{Lower-triangular, $R{=}C{=}256$}
+  & Naive & 16{,}896 & 16{,}896 & 19.1 \\
+  & SnF   & 2{,}112  & 16{,}896 & 40.1 \\
+  & DDA   & 2{,}112  & 2{,}560  & \textbf{43.3} \\
+\midrule
+\multirow{3}{*}{Upper-triangular, $R{=}C{=}256$}
+  & Naive & 16{,}896 & 16{,}896 & 19.1 \\
+  & SnF   & 2{,}112  & 16{,}896 & \textbf{40.1} \\
+  & DDA   & 2{,}112  & 16{,}896 & 29.6 \\
+\bottomrule
+\end{tabular}
+\end{table}

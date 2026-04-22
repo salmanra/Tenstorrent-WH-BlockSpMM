@@ -1,0 +1,7 @@
+group,registry,test,host_code,total_in0_reads,total_in1_reads
+mixed_sweep,5,0,Naive_row_R256_d50,16384,16384
+mixed_sweep,5,0,SnF_row_R256_d50,2048,16384
+mixed_sweep,5,0,CDA_row_R256_d50,2048,2048
+mixed_sweep,5,2,Naive_multi_diag_R256_d50,16384,16384
+mixed_sweep,5,2,SnF_multi_diag_R256_d50,2048,16384
+mixed_sweep,5,2,CDA_multi_diag_R256_d50,2048,13856

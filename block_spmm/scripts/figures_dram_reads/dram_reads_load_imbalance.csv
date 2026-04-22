@@ -1,0 +1,5 @@
+group,registry,test,host_code,total_in0_reads,total_in1_reads
+load_imbalance,29,0,CDA,2112,2560
+load_imbalance,29,0,CDA_no_lb,2112,3904
+load_imbalance,29,1,CDA,272,384
+load_imbalance,29,1,CDA_no_lb,272,496

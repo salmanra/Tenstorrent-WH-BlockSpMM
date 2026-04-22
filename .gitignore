@@ -1,0 +1,24 @@
+# Runtime outputs from paper_reproduce scripts
+paper_reproduce/logs/
+paper_reproduce/outputs/
+
+# Python caches
+__pycache__/
+*.pyc
+*.pyo
+
+# CMake build artifacts
+build/
+build_*/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+*.o
+*.a
+
+# Editor/IDE state
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store

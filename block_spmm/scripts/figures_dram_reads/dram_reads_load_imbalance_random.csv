@@ -1,0 +1,7 @@
+group,registry,test,host_code,total_in0_reads,total_in1_reads
+load_imbalance_random,4,3,Naive,8192,8192
+load_imbalance_random,4,3,Naive_no_lb,8192,8192
+load_imbalance_random,4,3,SnF,1024,8192
+load_imbalance_random,4,3,SnF_no_lb,1024,8192
+load_imbalance_random,4,3,CDA,1024,5920
+load_imbalance_random,4,3,CDA_no_lb,1024,6368

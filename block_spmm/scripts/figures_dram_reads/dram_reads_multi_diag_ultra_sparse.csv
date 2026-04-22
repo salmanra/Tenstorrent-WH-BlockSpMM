@@ -1,0 +1,4 @@
+group,registry,test,host_code,total_in0_reads,total_in1_reads
+multi_diag_ultra_sparse,27,2,Naive,784,784
+multi_diag_ultra_sparse,27,2,SnF,98,784
+multi_diag_ultra_sparse,27,2,CDA,98,784
