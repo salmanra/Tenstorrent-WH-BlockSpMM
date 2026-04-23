@@ -110,6 +110,20 @@ pip install -r requirements.txt
 The aggregators need `pandas`, `matplotlib`, `numpy`. Any recent version
 works.
 
+> **Python module path — read this if reproduction runs return empty TFLOP/s columns.**
+>
+> The export binaries spawn `python … read_spmm_profiler.py` / `read_sddmm_profiler.py`
+> as subprocesses (via `std::system`). Those scripts import
+> `tt_metal.tools.profiler.*`, which only resolves if tt-metal's own Python
+> environment is active — typically by having activated tt-metal's virtualenv
+> (`python_env/`) or by having built tt-metal via the standard `build_metal.sh`
+> flow, which leaves `tt_metal` importable from the default `python`.
+>
+> If you invoke the reproduction scripts inside an `env -i` / sanitized shell
+> that strips `PYTHONPATH` or virtualenv vars, the TFLOP/s column of every
+> aggregated CSV will come out blank (the profile/trace steps still succeed,
+> only the TFLOP/s extraction silently fails). Run your normal shell.
+
 ## Step 7 — Export `TT_METAL_HOME` and verify
 
 ```bash
@@ -125,6 +139,9 @@ cd $TT_METAL_HOME/tt_metal/programming_examples/Tenstorrent-WH-BlockSpMM
 bash paper_reproduce/reproduce_fig3.sh
 head paper_reproduce/outputs/fig3_dda_throughput.csv
 ```
+
+If the `tflops` column is populated for every row, reproduction is working;
+proceed to [`REPRODUCE.md`](REPRODUCE.md) for the full set of paper artifacts.
 
 ## Next
 
