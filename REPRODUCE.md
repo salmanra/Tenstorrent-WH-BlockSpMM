@@ -3,6 +3,10 @@
 Prerequisites: complete [`INSTALL.md`](INSTALL.md) and ensure
 `TT_METAL_HOME` is exported in your shell.
 
+Wall times below were measured on the reference environment described
+in [`ENVIRONMENT.md`](ENVIRONMENT.md). Smaller hosts will see longer
+reproductions in proportion to their build parallelism.
+
 ## All figures and tables at once
 
 ```bash

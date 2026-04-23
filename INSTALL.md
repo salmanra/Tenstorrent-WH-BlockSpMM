@@ -64,8 +64,12 @@ Revert with `patch -p1 -R < …` if needed.
 ./build_metal.sh --enable-profiler --build-programming-examples
 ```
 
-This takes ~15 minutes on a warm cache. It produces the submodule's
-executables at `build/programming_examples/block_sparse/`:
+This takes **≈ 7 minutes** on our reference 96-logical-core host (AMD
+EPYC 7352, 2 × 24-core) with a cold build tree and empty CPM cache — see
+[`ENVIRONMENT.md`](ENVIRONMENT.md) for full system details and timing
+notes. Expect longer on smaller hosts (`build_metal.sh -j` uses `nproc`).
+It produces the submodule's executables at
+`build/programming_examples/block_sparse/`:
 
 ```
 profile_block_spmm
