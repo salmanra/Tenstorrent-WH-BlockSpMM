@@ -1,13 +1,14 @@
 #include <stdint.h>
 #include <cstdint>
-#include "dataflow_api.h"
+#include "api/dataflow/dataflow_api.h"
 #include "hostdevcommon/kernel_structs.h"
-#include "debug/dprint.h"
+#include "api/debug/dprint.h"
 #include <tools/profiler/kernel_profiler.hpp>
 #include "tt_metal/programming_examples/Tenstorrent-WH-BlockSpMM/block_spmm/kernels/common/spmm_reader_common.hpp"
 #include "tt_metal/programming_examples/Tenstorrent-WH-BlockSpMM/block_spmm/kernels/common/spmm_tile_ops.hpp"
 #include "tt_metal/programming_examples/Tenstorrent-WH-BlockSpMM/block_spmm/kernels/common/spmm_indexing.hpp"
 #include "tt_metal/programming_examples/Tenstorrent-WH-BlockSpMM/block_spmm/kernels/common/spmm_profiling.hpp"
+#include "tt_metal/programming_examples/Tenstorrent-WH-BlockSpMM/block_spmm/kernels/common/spmm_heartbeat.hpp"
 
 // Compile-time profiling zone toggle (override to 0 via CreateKernel defines)
 #ifndef PROFILE_READ_IN1
@@ -37,6 +38,8 @@ constexpr uint32_t CDA_DRAM_READ = 1;
 constexpr uint32_t CDA_RECEIVE   = 2;
 
 void kernel_main(){
+    BSPMM_HB_WP("C1S");
+    BSPMM_HB_DATA("cda in1 start");
     ///////////////////////////////////////////////////////////////////////
     /// COMPILETIME ARGS //////////////////////////////////////////////////
     ///////////////////////////////////////////////////////////////////////
@@ -151,22 +154,17 @@ void kernel_main(){
     const InterleavedAddrGenFast<true> out_s = {
         .bank_base_address = out_tensor_addr, .page_size = output_tile_size, .data_format = output_format};
 
-    // CDA semaphore setup — MUST happen before indexing load so that
-    // semaphores are initialized before any core can signal us.
-    // (A fast core may finish wait_for_indexing, enter the main loop,
-    //  and noc_semaphore_inc our sender_sem before we reach this point.)
+    // CDA semaphores — zero-initialized by the host (CreateSemaphore initial value).
+    // Do NOT store 0 here: a fast core can noc_semaphore_inc our sender_sem before
+    // this kernel starts, and a local store here would wipe it (lost wakeup).
     volatile tt_l1_ptr uint32_t* in1_sender_sem_ptr =
         reinterpret_cast<volatile tt_l1_ptr uint32_t*>(in1_sender_semaphore_addr);
-    *(in1_sender_sem_ptr) = 0;
     volatile tt_l1_ptr uint32_t* in1_receiver_sem_ptr =
         reinterpret_cast<volatile tt_l1_ptr uint32_t*>(in1_receiver_semaphore_addr);
-    *(in1_receiver_sem_ptr) = 0;
     volatile tt_l1_ptr uint32_t* in1_barrier_sem_ptr =
         reinterpret_cast<volatile tt_l1_ptr uint32_t*>(in1_barrier_semaphore_addr);
-    *(in1_barrier_sem_ptr) = 0;
     volatile tt_l1_ptr uint32_t* in1_release_sem_ptr =
         reinterpret_cast<volatile tt_l1_ptr uint32_t*>(in1_release_semaphore_addr);
-    *(in1_release_sem_ptr) = 0;
 
     // Precompute CB slot addresses for CDA forwarding.
     // Double-buffered CB has two slots: base and base + half_size.
@@ -205,6 +203,7 @@ void kernel_main(){
     uint32_t out_tensor_x_coord_offset = 0;
     uint32_t output_idx_y, output_idx_x;
     for (uint32_t iter_y = 0; iter_y < num_iters_y; iter_y++){
+        BSPMM_HB_DATA("cda in1 iter_y={} num_iters_x={} core_y={}", iter_y, num_iters_x, my_core_idx_y);
         // Get y_coord for this iter
         output_idx_y = y_coords[iter_y];
         uint32_t my_block_start = indptr[output_idx_y];
@@ -319,7 +318,7 @@ void kernel_main(){
 #if PROFILE_READ_IN1 == 1
                         DeviceZoneScopedN("SpMM Zone: CDA Reading dense block of in1 from DRAM");
 #endif
-                        DPRINT_DATA0(DPRINT << "in1 DRAM Read: " << action << ENDL());
+                        DPRINT_DATA0("in1 DRAM Read: {}", action);
 
                         spmm::read_block_by_tile(
                             in1_tensor_start_tile_id + my_col * in1_block_stride,
@@ -337,8 +336,11 @@ void kernel_main(){
                         noc_semaphore_set(in1_receiver_sem_ptr, 0);
                         uint64_t sender_sem_noc = get_noc_addr(noc_x_for_column, noc_y_table[my_sender_idx], in1_sender_semaphore_addr);
                         uint32_t my_slot_bit = (l1_write_addr_in1_start != in1_cb_base) ? 1 : 0;
+                        BSPMM_HB_WP("C1RW");
+                        BSPMM_HB_DATA("cda in1 recv wait iter_y={} iter_x={} vstep={} sender={}", iter_y, iter_x, vstep, my_sender_idx);
                         noc_semaphore_inc(sender_sem_noc, 1 + my_slot_bit);
                         noc_semaphore_wait(in1_receiver_sem_ptr, 1);
+                        BSPMM_HB_WP("C1RD");
 
                     }
 
@@ -351,7 +353,9 @@ void kernel_main(){
 #endif
 
                         // Wait for downstream readiness — value encodes CB slot bit
+                        BSPMM_HB_WP("C1SW");
                         while (*in1_sender_sem_ptr == 0) {}
+                        BSPMM_HB_WP("C1SD");
                         uint32_t receiver_slot_bit = *in1_sender_sem_ptr - 1;
                         noc_semaphore_set(in1_sender_sem_ptr, 0);
 
@@ -400,7 +404,11 @@ void kernel_main(){
                 uint32_t out_block_num_tiles = in0_block_h * in1_block_w;
                 uint32_t out_tensor_sbh_start_tile_id = out_tensor_start_tile_id + out_tensor_y_coord_offset + out_tensor_x_coord_offset;
 
+                BSPMM_HB_WP("C1OW");
+                BSPMM_HB_DATA("cda in1 wait out iter_y={} iter_x={}", iter_y, iter_x);
                 cb_wait_front(spmm::cb_id_out, out_block_num_tiles);
+                BSPMM_HB_WP("C1OD");
+                BSPMM_HB_DATA("cda in1 out ready iter_y={} iter_x={}", iter_y, iter_x);
 
                 uint32_t l1_read_addr = get_read_ptr(spmm::cb_id_out);
 #if SKIP_DRAM_WRITE == 0
@@ -432,5 +440,7 @@ void kernel_main(){
         cb_pop_front(spmm::cb_id_col_indices, col_indices_num_tiles);
         cb_pop_front(spmm::cb_id_indptr, indptr_num_tiles);
     }
+    BSPMM_HB_WP("C1D");
+    BSPMM_HB_DATA("cda in1 done");
 
 }

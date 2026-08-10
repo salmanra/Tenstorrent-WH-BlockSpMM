@@ -7,11 +7,10 @@
 #include <memory>
 #include <tt-metalium/host_api.hpp>
 #include <tt-metalium/constants.hpp>
-#include <tt-metalium/util.hpp>
+#include <tt-metalium/tt_backend_api_types.hpp>
 #include <tt-metalium/bfloat16.hpp>
 // #include <tt-metalium/test_tiles.hpp>
 #include <tt-metalium/device.hpp>
-#include <tt-metalium/command_queue.hpp>
 #include <tt-metalium/tt_metal.hpp>
 #include "bmm_op.hpp"
 #include <tt-metalium/tilize_utils.hpp>

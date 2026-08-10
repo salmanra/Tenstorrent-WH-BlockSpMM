@@ -1,12 +1,14 @@
 #include <stdint.h>
 #include <cstdint>
-#include "dataflow_api.h"
+#include "api/dataflow/dataflow_api.h"
 #include "hostdevcommon/kernel_structs.h"
+#include "api/debug/dprint.h"
 #include <tools/profiler/kernel_profiler.hpp>
 #include "tt_metal/programming_examples/Tenstorrent-WH-BlockSpMM/block_spmm/kernels/common/spmm_reader_common.hpp"
 #include "tt_metal/programming_examples/Tenstorrent-WH-BlockSpMM/block_spmm/kernels/common/spmm_tile_ops.hpp"
 #include "tt_metal/programming_examples/Tenstorrent-WH-BlockSpMM/block_spmm/kernels/common/spmm_indexing.hpp"
 #include "tt_metal/programming_examples/Tenstorrent-WH-BlockSpMM/block_spmm/kernels/common/spmm_profiling.hpp"
+#include "tt_metal/programming_examples/Tenstorrent-WH-BlockSpMM/block_spmm/kernels/common/spmm_heartbeat.hpp"
 
 // Compile-time profiling zone toggle (override to 0 via CreateKernel defines)
 #ifndef PROFILE_READ_IN1
@@ -25,6 +27,8 @@
 #endif
 
 void kernel_main(){
+    BSPMM_HB_WP("S1S");
+    BSPMM_HB_DATA("snf in1 start");
     ///////////////////////////////////////////////////////////////////////
     /// COMPILETIME ARGS //////////////////////////////////////////////////
     ///////////////////////////////////////////////////////////////////////
@@ -88,7 +92,6 @@ void kernel_main(){
     if constexpr (is_output_writer) {
         out_tensor_start_tile_id = get_arg_val<uint32_t>(arg_index++);
     }
-
     ///////////////////////////////////////////////////////////////////////
     /// END RUNTIME ARGS //////////////////////////////////////////////////
     ///////////////////////////////////////////////////////////////////////
@@ -132,6 +135,7 @@ void kernel_main(){
     uint32_t out_tensor_x_coord_offset = 0;
     uint32_t output_idx_y, output_idx_x;
     for (uint32_t iter_y = 0; iter_y < num_iters_y; iter_y++){
+        BSPMM_HB_DATA("snf in1 iter_y={} num_iters_x={}", iter_y, num_iters_x);
         // Get y_coord for this iter
         output_idx_y = y_coords[iter_y];
         uint32_t block_row_start = indptr[output_idx_y];
@@ -152,7 +156,7 @@ void kernel_main(){
 #if PROFILE_READ_IN1 == 1
                 DeviceZoneScopedN("SpMM Zone: Reading dense block of in1 from DRAM");
 #endif
-                DPRINT_DATA0(DPRINT << "in1 DRAM read" << ENDL());
+                DPRINT_DATA0("in1 DRAM read");
                 spmm::read_block_by_tile(
                     in1_tensor_start_tile_id + bsr_col_index * in1_block_stride,
                     s1, l1_write_addr_in1,
@@ -168,7 +172,11 @@ void kernel_main(){
                 uint32_t out_block_num_tiles = in0_block_h * in1_block_w;
                 uint32_t out_tensor_sbh_start_tile_id = out_tensor_start_tile_id + out_tensor_y_coord_offset + out_tensor_x_coord_offset;
 
+                BSPMM_HB_WP("S1OW");
+                BSPMM_HB_DATA("snf in1 wait out iter_y={} iter_x={}", iter_y, iter_x);
                 cb_wait_front(spmm::cb_id_out, out_block_num_tiles);
+                BSPMM_HB_WP("S1OD");
+                BSPMM_HB_DATA("snf in1 out ready iter_y={} iter_x={}", iter_y, iter_x);
 
                 uint32_t l1_read_addr = get_read_ptr(spmm::cb_id_out);
 #if SKIP_DRAM_WRITE == 0
@@ -200,4 +208,6 @@ void kernel_main(){
         cb_pop_front(spmm::cb_id_col_indices, col_indices_num_tiles);
         cb_pop_front(spmm::cb_id_indptr, indptr_num_tiles);
     }
+    BSPMM_HB_WP("S1D");
+    BSPMM_HB_DATA("snf in1 done");
 }

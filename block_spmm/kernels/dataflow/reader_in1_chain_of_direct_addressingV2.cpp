@@ -1,8 +1,8 @@
 #include <stdint.h>
 #include <cstdint>
-#include "dataflow_api.h"
+#include "api/dataflow/dataflow_api.h"
 #include "hostdevcommon/kernel_structs.h"
-#include "debug/dprint.h"
+#include "api/debug/dprint.h"
 #include <tools/profiler/kernel_profiler.hpp>
 #include "tt_metal/programming_examples/Tenstorrent-WH-BlockSpMM/block_spmm/kernels/common/spmm_reader_common.hpp"
 #include "tt_metal/programming_examples/Tenstorrent-WH-BlockSpMM/block_spmm/kernels/common/spmm_tile_ops.hpp"
@@ -151,22 +151,17 @@ void kernel_main(){
     const InterleavedAddrGenFast<true> out_s = {
         .bank_base_address = out_tensor_addr, .page_size = output_tile_size, .data_format = output_format};
 
-    // CDA semaphore setup — MUST happen before indexing load so that
-    // semaphores are initialized before any core can signal us.
-    // (A fast core may finish wait_for_indexing, enter the main loop,
-    //  and noc_semaphore_inc our sender_sem before we reach this point.)
+    // CDA semaphores — zero-initialized by the host (CreateSemaphore initial value).
+    // Do NOT store 0 here: a fast core can noc_semaphore_inc our sender_sem before
+    // this kernel starts, and a local store here would wipe it (lost wakeup).
     volatile tt_l1_ptr uint32_t* in1_sender_sem_ptr =
         reinterpret_cast<volatile tt_l1_ptr uint32_t*>(in1_sender_semaphore_addr);
-    *(in1_sender_sem_ptr) = 0;
     volatile tt_l1_ptr uint32_t* in1_receiver_sem_ptr =
         reinterpret_cast<volatile tt_l1_ptr uint32_t*>(in1_receiver_semaphore_addr);
-    *(in1_receiver_sem_ptr) = 0;
     volatile tt_l1_ptr uint32_t* in1_barrier_sem_ptr =
         reinterpret_cast<volatile tt_l1_ptr uint32_t*>(in1_barrier_semaphore_addr);
-    *(in1_barrier_sem_ptr) = 0;
     volatile tt_l1_ptr uint32_t* in1_release_sem_ptr =
         reinterpret_cast<volatile tt_l1_ptr uint32_t*>(in1_release_semaphore_addr);
-    *(in1_release_sem_ptr) = 0;
 
     // Precompute CB slot addresses for CDA forwarding.
     // Double-buffered CB has two slots: base and base + half_size.
@@ -316,7 +311,7 @@ void kernel_main(){
 #if PROFILE_READ_IN1 == 1
                         DeviceZoneScopedN("SpMM Zone: CDA Reading dense block of in1 from DRAM");
 #endif
-                        DPRINT_DATA0(DPRINT << "in1 DRAM Read: " << action << ENDL());
+                        DPRINT_DATA0("in1 DRAM Read: {}", action);
 
                         spmm::read_block_by_tile(
                             in1_tensor_start_tile_id + my_col * in1_block_stride,

@@ -163,7 +163,7 @@ public:
             for (size_t j = 0; j < other.W; ++j) {
                 float sum = 0;
                 for (size_t k = 0; k < W; ++k) {
-                    sum += data[i * W + k].to_float() * other.data[k * other.W + j].to_float();
+                    sum += static_cast<float>(data[i * W + k]) * static_cast<float>(other.data[k * other.W + j]);
                 }
                 result.data[i * other.W + j] = T(sum);
             }
@@ -187,7 +187,7 @@ public:
         for (size_t i = 0; i < H; ++i) {
             for (size_t j = 0; j < W; ++j) {
 
-                if (std::abs(data[i * W + j].to_float() - other.data[i * W + j].to_float()) > tol) {
+                if (std::abs(static_cast<float>(data[i * W + j]) - static_cast<float>(other.data[i * W + j])) > tol) {
                     return false;
                 }
             }
@@ -755,7 +755,7 @@ public:
                                     for (size_t cc = c; cc < std::min(C, c + TILE_SIZE); cc++) {
                                         T a_val = *(iter_start + rr * C + cc);
                                         T b_val = *(iter_B_start + cc * B.W + pp);
-                                        sum += a_val.to_float() * b_val.to_float();
+                                        sum += static_cast<float>(a_val) * static_cast<float>(b_val);
                                     }
                                     output_tile[(rr - r) * TILE_SIZE + pp - p] += sum;
                                 }
@@ -954,43 +954,65 @@ public:
     dense_matrix<T> omp_spmm_bf16(dense_matrix<T> &B) {
         assert(W == B.H);
         dense_matrix<T> output(H, B.W);
+        constexpr size_t tile_elems = TILE_SIZE * TILE_SIZE;
 
         // FORALL parallelism on the block rows
         #pragma omp parallel for
-        for (size_t i = 0; i < indptr.size() - 1; i++) {                        // runtime args
-            for (size_t r = 0; r < R; r += TILE_SIZE) {                         // comptime args
-                for (size_t p = 0; p < B.W; p += TILE_SIZE) {                   // comptime args
-                    std::vector<float> output_tile(TILE_SIZE * TILE_SIZE, 0);   // DST register
-                    for (size_t idx = indptr[i]; idx < indptr[i + 1]; idx++) {  // reading raw data from a CB
-                        size_t j = indices[idx];                                // reading raw data from a CB
-                        auto iter_start = data.begin() + idx * R * C;           // src0_addr, determined from args
-                        auto iter_B_start = B.data.begin() + j * C * B.W;       // src1_addr, determined from args
-                        for (size_t c = 0; c < C; c += TILE_SIZE) {             // comptime args
-                            // begin matmul_tiles API call
-                            for (size_t rr = r; rr < std::min(r + TILE_SIZE, R); rr++) {
-                                for (size_t pp = p; pp < std::min(p + TILE_SIZE, B.W); pp++) {
-                                    float sum = 0;
-                                    #pragma omp reduction(+:sum)
-                                    for (size_t cc = c; cc < std::min(C, c + TILE_SIZE); cc++) {
-                                        T a_val = *(iter_start + rr * C + cc);
-                                        T b_val = *(iter_B_start + cc * B.W + pp);
-                                        sum += a_val.to_float() * b_val.to_float();
-                                    }
-                                    output_tile[(rr - r) * TILE_SIZE + pp - p] += sum;
+        for (size_t i = 0; i < indptr.size() - 1; i++) {
+            const size_t row_begin = indptr[i];
+            const size_t row_end = indptr[i + 1];
+            const size_t row_blocks = row_end - row_begin;
+
+            std::vector<float> a_row(row_blocks * R * C);
+            for (size_t block = 0; block < row_blocks; block++) {
+                const size_t idx = row_begin + block;
+                const auto iter_start = data.begin() + idx * R * C;
+                float* a_block = a_row.data() + block * R * C;
+                for (size_t rr = 0; rr < R; rr++) {
+                    for (size_t cc = 0; cc < C; cc++) {
+                        a_block[rr * C + cc] = static_cast<float>(*(iter_start + rr * C + cc));
+                    }
+                }
+            }
+
+            for (size_t r = 0; r < R; r += TILE_SIZE) {
+                const size_t r_end = std::min(r + TILE_SIZE, R);
+                for (size_t p = 0; p < B.W; p += TILE_SIZE) {
+                    const size_t p_end = std::min(p + TILE_SIZE, B.W);
+                    float output_tile[tile_elems] = {};
+                    for (size_t block = 0; block < row_blocks; block++) {
+                        const size_t idx = row_begin + block;
+                        const size_t j = indices[idx];
+                        const float* a_block = a_row.data() + block * R * C;
+                        const auto iter_B_start = B.data.begin() + j * C * B.W;
+                        for (size_t c = 0; c < C; c += TILE_SIZE) {
+                            const size_t c_end = std::min(C, c + TILE_SIZE);
+                            float b_tile[tile_elems];
+                            for (size_t cc = c; cc < c_end; cc++) {
+                                float* b_tile_row = b_tile + (cc - c) * TILE_SIZE;
+                                const auto b_col = iter_B_start + cc * B.W;
+                                for (size_t pp = p; pp < p_end; pp++) {
+                                    b_tile_row[pp - p] = static_cast<float>(*(b_col + pp));
                                 }
                             }
-                            // end matmul_tiles API call
+                            for (size_t rr = r; rr < r_end; rr++) {
+                                float* out_row = output_tile + (rr - r) * TILE_SIZE;
+                                const float* a_row_ptr = a_block + rr * C;
+                                for (size_t cc = c; cc < c_end; cc++) {
+                                    const float a_val = a_row_ptr[cc];
+                                    const float* b_tile_row = b_tile + (cc - c) * TILE_SIZE;
+                                    for (size_t pp = p; pp < p_end; pp++) {
+                                        out_row[pp - p] += a_val * b_tile_row[pp - p];
+                                    }
+                                }
+                            }
                         }
                     }
-                    // write tile to DRAM starting at tile i*R + r, p (output is dense, no more blocks)
-                    // On TT:
-                    // 1. pack DST reg to output CB
-                    // 2. writer kernel pops from output CB
-                    // 3. writer kernel NoC's to DRAM
-                    for (size_t rr = r; rr < std::min(R, r + TILE_SIZE); rr++) {
-                        for (size_t pp = p; pp < std::min(B.W, p + TILE_SIZE); pp++) {
-                            *(output.data.begin() + (i * R + rr) * output.W + pp) =
-                                T(output_tile[(rr - r) * TILE_SIZE + pp - p]);
+                    for (size_t rr = r; rr < r_end; rr++) {
+                        auto out_it = output.data.begin() + (i * R + rr) * output.W;
+                        const float* tile_row = output_tile + (rr - r) * TILE_SIZE;
+                        for (size_t pp = p; pp < p_end; pp++) {
+                            *(out_it + pp) = T(tile_row[pp - p]);
                         }
                     }
                 }

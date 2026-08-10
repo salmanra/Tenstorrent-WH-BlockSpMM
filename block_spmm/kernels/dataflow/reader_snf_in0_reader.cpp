@@ -1,13 +1,14 @@
 #include <stdint.h>
 #include <cstdint>
-#include "dataflow_api.h"
+#include "api/dataflow/dataflow_api.h"
 #include "hostdevcommon/kernel_structs.h"
-#include "debug/dprint.h"
+#include "api/debug/dprint.h"
 #include <tools/profiler/kernel_profiler.hpp>
 #include "tt_metal/programming_examples/Tenstorrent-WH-BlockSpMM/block_spmm/kernels/common/spmm_reader_common.hpp"
 #include "tt_metal/programming_examples/Tenstorrent-WH-BlockSpMM/block_spmm/kernels/common/spmm_tile_ops.hpp"
 #include "tt_metal/programming_examples/Tenstorrent-WH-BlockSpMM/block_spmm/kernels/common/spmm_indexing.hpp"
 #include "tt_metal/programming_examples/Tenstorrent-WH-BlockSpMM/block_spmm/kernels/common/spmm_profiling.hpp"
+#include "tt_metal/programming_examples/Tenstorrent-WH-BlockSpMM/block_spmm/kernels/common/spmm_heartbeat.hpp"
 
 // Compile-time profiling zone toggles (override to 0 via CreateKernel defines)
 #ifndef PROFILE_READ_IN0
@@ -29,6 +30,8 @@
 #endif
 
 void kernel_main(){
+    BSPMM_HB_WP("S0S");
+    BSPMM_HB_DATA("snf in0 start");
     ///////////////////////////////////////////////////////////////////////
     /// COMPILETIME ARGS //////////////////////////////////////////////////
     ///////////////////////////////////////////////////////////////////////
@@ -116,16 +119,16 @@ void kernel_main(){
     const InterleavedAddrGenFast<true> out_s = {
         .bank_base_address = out_tensor_addr, .page_size = output_tile_size, .data_format = output_format};
 
-    // SnF semaphores
+    // SnF semaphores — zero-initialized by the host (CreateSemaphore initial value).
+    // Do NOT store 0 here: a neighbor's semaphore_inc can land before this kernel
+    // starts and would be wiped (lost wakeup, chain deadlock).
     volatile tt_l1_ptr uint32_t* in0_sender_semaphore_addr_ptr =
     reinterpret_cast<volatile tt_l1_ptr uint32_t*>(in0_sender_semaphore_addr);
-    *(in0_sender_semaphore_addr_ptr) = 0;
     const uint64_t in0_sender_semaphore_noc_addr =
     get_noc_addr(in0_sender_noc_x, in0_sender_noc_y, in0_sender_semaphore_addr);
 
     volatile tt_l1_ptr uint32_t* in0_receiver_semaphore_addr_ptr =
     reinterpret_cast<volatile tt_l1_ptr uint32_t*>(in0_receiver_semaphore_addr);
-    *(in0_receiver_semaphore_addr_ptr) = 0;
     const uint64_t in0_receiver_semaphore_noc_addr =
     get_noc_addr(in0_dest_noc_x, in0_dest_noc_y, in0_receiver_semaphore_addr);
 
@@ -161,6 +164,7 @@ void kernel_main(){
     uint32_t out_tensor_x_coord_offset = 0;
     uint32_t output_idx_y, output_idx_x;
     for (uint32_t iter_y = 0; iter_y < num_iters_y; iter_y++){
+        BSPMM_HB_DATA("snf in0 iter_y={} num_iters_x={} injector={} sink={}", iter_y, num_iters_x, is_injector_core, is_sink_core);
         uint32_t out_tensor_y_coord_offset = RtNt * folded_y_coords[iter_y];
 
         // For now, all blocks are the same size. But soon we will want this line to accomodate unaligned blocks
@@ -186,7 +190,7 @@ void kernel_main(){
 #endif
                     // Read in0 block from DRAM
                     uint32_t num_blocks_in = reduction_iter - block_row_start;
-                    DPRINT_DATA1(DPRINT << "in0 DRAM read: " << reduction_iter << ENDL());
+                    DPRINT_DATA1("in0 DRAM read: {}", reduction_iter);
                     spmm::read_block_by_tile(
                         in0_tensor_start_tile_id + num_blocks_in * in0_block_num_tiles,
                         s0, l1_write_addr_in0,
@@ -201,14 +205,19 @@ void kernel_main(){
 #endif
                     // Read in0 block from neighbor
                     noc_semaphore_set(in0_receiver_semaphore_addr_ptr, 0);
+                    BSPMM_HB_WP("S0RW");
+                    BSPMM_HB_DATA("snf in0 recv wait iter_y={} iter_x={} red={}", iter_y, iter_x, reduction_iter);
                     noc_semaphore_inc(in0_sender_semaphore_noc_addr, 1);
                     noc_semaphore_wait(in0_receiver_semaphore_addr_ptr, 1);
+                    BSPMM_HB_WP("S0RD");
                 }
 
                 cb_push_back(spmm::cb_id_in0, in0_block_num_tiles);
 
                 if (!is_sink_core) {
+                    BSPMM_HB_WP("S0FW");
                     noc_semaphore_wait(in0_sender_semaphore_addr_ptr, 1);
+                    BSPMM_HB_WP("S0FD");
                     noc_semaphore_set(in0_sender_semaphore_addr_ptr, 0);
 
                     uint64_t in0_unicast_data_addr = get_noc_addr(in0_dest_noc_x, in0_dest_noc_y, l1_write_addr_in0_start);
@@ -222,7 +231,11 @@ void kernel_main(){
                 uint32_t out_block_num_tiles = in0_block_h * in1_block_w;
                 uint32_t out_tensor_sbh_start_tile_id = out_tensor_start_tile_id + out_tensor_y_coord_offset + out_tensor_x_coord_offset;
 
+                BSPMM_HB_WP("S0OW");
+                BSPMM_HB_DATA("snf in0 wait out iter_y={} iter_x={}", iter_y, iter_x);
                 cb_wait_front(spmm::cb_id_out, out_block_num_tiles);
+                BSPMM_HB_WP("S0OD");
+                BSPMM_HB_DATA("snf in0 out ready iter_y={} iter_x={}", iter_y, iter_x);
                 uint32_t l1_read_addr = get_read_ptr(spmm::cb_id_out);
 #if SKIP_DRAM_WRITE == 0
 #if PROFILE_WRITE_OUT == 1
@@ -251,5 +264,7 @@ void kernel_main(){
     }
     cb_pop_front(spmm::cb_id_col_indices, col_indices_num_tiles);
     cb_pop_front(spmm::cb_id_indptr, indptr_num_tiles);
+    BSPMM_HB_WP("S0D");
+    BSPMM_HB_DATA("snf in0 done");
 
 }

@@ -6,7 +6,7 @@
 
 #include "include_me.hpp"
 #include "sparse_common/host_code_utils.hpp"
-#include "tt-metalium/assert.hpp"
+#include <tt_stl/assert.hpp>
 #include "tt-metalium/bfloat16.hpp"
 #include "tt-metalium/core_coord.hpp"
 #include "tt-metalium/host_api.hpp"

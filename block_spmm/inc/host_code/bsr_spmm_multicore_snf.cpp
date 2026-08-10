@@ -8,6 +8,8 @@
 // Still just SnF on the sparse matrix tho
 
 
+#include <cstring>
+
 #include "../host_code.hpp"
 #include "spmm_zone_config.hpp"
 
@@ -50,15 +52,14 @@ void bsr_spmm_multicore_snf_impl(
     // uint32_t in1_parallel_axis_cores = transpose_core_grid ? grid_size.y : grid_size.x;
 
 
-    CommandQueue& cq = device->command_queue();
     Program program{};
 
     tt::DataFormat cb_data_format = tt::DataFormat::Float16_b;
     MathFidelity math_fidelity = MathFidelity::HiFi4;
-    uint32_t single_tile_size = detail::TileSize(cb_data_format);
+    uint32_t single_tile_size = tt::tile_size(cb_data_format);
 
     tt::DataFormat indexing_data_format = tt::DataFormat::Int32;
-    uint32_t indexing_data_single_tile_size = detail::TileSize(indexing_data_format);
+    uint32_t indexing_data_single_tile_size = tt::tile_size(indexing_data_format);
     uint32_t dram_buffer_indptr_size =
         sizeof(int) * a.indptr.size();
     // Round up to tile size
@@ -197,10 +198,13 @@ void bsr_spmm_multicore_snf_impl(
     }
 
 
-    auto in0_sender_semaphore_id = tt::tt_metal::CreateSemaphore(program, all_cores, INVALID);
-    auto in0_receiver_semaphore_id = tt::tt_metal::CreateSemaphore(program, all_cores, INVALID);
-    auto in1_sender_semaphore_id = tt::tt_metal::CreateSemaphore(program, all_cores, INVALID);
-    auto in1_receiver_semaphore_id = tt::tt_metal::CreateSemaphore(program, all_cores, INVALID);
+    // Host-initialize chain semaphores to 0: with INVALID the kernels zero them at start,
+    // and a neighbor's semaphore_inc can land before that store executes and be wiped
+    // (lost wakeup, both cores block). Happens deterministically under BH slow dispatch.
+    auto in0_sender_semaphore_id = tt::tt_metal::CreateSemaphore(program, all_cores, 0);
+    auto in0_receiver_semaphore_id = tt::tt_metal::CreateSemaphore(program, all_cores, 0);
+    auto in1_sender_semaphore_id = tt::tt_metal::CreateSemaphore(program, all_cores, 0);
+    auto in1_receiver_semaphore_id = tt::tt_metal::CreateSemaphore(program, all_cores, 0);
 
 
     // Circural Buffer sizing
@@ -642,13 +646,14 @@ void bsr_spmm_multicore_snf_impl(
             std::vector<uint32_t> in1_reader_runtime_args;
 
             uint32_t num_iters_y_this_core = output_y_indices[core_idx_y].size();
-            uint32_t num_iters_x_this_core = std::min(num_iters_x, num_blocks_x - output_idx_x_start + 1);
+            uint32_t num_iters_x_this_core = std::min(num_iters_x, num_blocks_x - output_idx_x_start);
             in0_snf_reader_runtime_args.push_back(num_iters_x_this_core);
             in0_snf_reader_runtime_args.push_back(num_iters_y_this_core);
             in0_snf_reader_runtime_args.push_back(output_idx_x_start);
             in1_reader_runtime_args.push_back(num_iters_x_this_core);
             in1_reader_runtime_args.push_back(num_iters_y_this_core);
             in1_reader_runtime_args.push_back(output_idx_x_start);
+            compute_runtime_args.push_back(num_iters_x_this_core);
             compute_runtime_args.push_back(num_iters_y_this_core);
             for (int iter_y = 0; iter_y < num_iters_y_this_core; iter_y++) {
                 uint32_t folded_output_idx_y = output_y_indices[core_idx_y][iter_y];
@@ -737,31 +742,35 @@ void bsr_spmm_multicore_snf_impl(
     std::vector<uint32_t> padded_indptr(dram_buffer_indptr_size / sizeof(uint32_t), 0);
     std::copy(a.indptr.begin(), a.indptr.end(), padded_indptr.begin());
 
-    EnqueueWriteBuffer(cq, src0_dram_buffer, a.data.data(), false);
-    EnqueueWriteBuffer(cq, src1_dram_buffer, b.data.data(), false);
-    EnqueueWriteBuffer(cq, column_indices_dram_buffer, padded_col_indices.data(), false);
-    EnqueueWriteBuffer(cq, indptr_dram_buffer, padded_indptr.data(), true);
+    bspmm_compat::write_buffer_blocking(src0_dram_buffer, a.data.data());
+    bspmm_compat::write_buffer_blocking(src1_dram_buffer, b.data.data());
+    bspmm_compat::write_buffer_blocking(column_indices_dram_buffer, padded_col_indices.data());
+    bspmm_compat::write_buffer_blocking(indptr_dram_buffer, padded_indptr.data());
 
     if constexpr (is_profiling){
         int num_iters = 10; // TODO: there should be smarter way to set the number of iters. we'll see
-        EnqueueProgram(cq, program, true);
+        bspmm_compat::launch_program_blocking(device, program);
         ZoneScopedNC("Device program Loop", tracy::Color::Aquamarine);
         for (int i = 0; i < num_iters; i++){
-            EnqueueProgram(cq, program, true);
+            bspmm_compat::launch_program_blocking(device, program);
         }
     }
     else if constexpr (verbose){
         log_info(tt::LogVerif, " -- Entering Program --");
-        EnqueueProgram(cq, program, true); // block on this call so we can determine the order of print statements
+        bspmm_compat::launch_program_blocking(device, program);
     }
     else {
-        EnqueueProgram(cq, program, false);
+        bspmm_compat::launch_program_blocking(device, program);
     }
 
     if constexpr (verbose)
         log_info(tt::LogVerif, " -- Program returned --");
 
     if constexpr (!is_profiling){
+        // Regioned reads of interleaved DRAM are broken under slow dispatch (see bspmm_compat),
+        // so stage the packed output buffer and slice per nonzero row.
+        std::vector<bfloat16> dst_packed(dram_buffer_dst_total_size / sizeof(bfloat16));
+        bspmm_compat::read_buffer_blocking(dst_dram_buffer, dst_packed.data());
         uint32_t nonzero_row_index = 0;
         for (size_t row_index = 0; row_index < a.indptr.size() - 1; row_index++) {
             if (a.indptr[row_index+1] - a.indptr[row_index] == 0)
@@ -769,13 +778,14 @@ void bsr_spmm_multicore_snf_impl(
             if constexpr (verbose) {
                 log_info(tt::LogVerif, "Reading output row {} from device", row_index);
             }
-            BufferRegion DRAM_row(nonzero_row_index * dram_buffer_dst_row_size, dram_buffer_dst_row_size);
-            EnqueueReadSubBuffer(cq, dst_dram_buffer, output.data.data() + (row_index * R * N), DRAM_row, true);
+            std::memcpy(
+                output.data.data() + row_index * R * N,
+                dst_packed.data() + nonzero_row_index * R * N,
+                dram_buffer_dst_row_size);
             nonzero_row_index++;
         }
     }
 
-    Finish(cq);
     if constexpr (verbose)
         log_info(tt::LogVerif, " -- Finished reading output --");
 }

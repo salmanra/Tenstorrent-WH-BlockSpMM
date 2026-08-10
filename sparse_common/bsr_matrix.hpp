@@ -162,7 +162,7 @@ public:
             for (size_t j = 0; j < other.W; ++j) {
                 float sum = 0;
                 for (size_t k = 0; k < W; ++k) {
-                    sum += data[i * W + k].to_float() * other.data[k * other.W + j].to_float();
+                    sum += static_cast<float>(data[i * W + k]) * static_cast<float>(other.data[k * other.W + j]);
                 }
                 result.data[i * other.W + j] = T(sum);
             }
@@ -186,7 +186,7 @@ public:
         for (size_t i = 0; i < H; ++i) {
             for (size_t j = 0; j < W; ++j) {
 
-                if (std::abs(data[i * W + j].to_float() - other.data[i * W + j].to_float()) > tol) {
+                if (std::abs(static_cast<float>(data[i * W + j]) - static_cast<float>(other.data[i * W + j])) > tol) {
                     return false;
                 }
             }
@@ -710,7 +710,7 @@ public:
                                     for (size_t cc = c; cc < std::min(C, c + TILE_SIZE); cc++) {
                                         T a_val = *(iter_start + rr * C + cc);
                                         T b_val = *(iter_B_start + cc * B.W + pp);
-                                        sum += a_val.to_float() * b_val.to_float();
+                                        sum += static_cast<float>(a_val) * static_cast<float>(b_val);
                                     }
                                     output_tile[(rr - r) * TILE_SIZE + pp - p] += sum;
                                 }
@@ -929,7 +929,7 @@ public:
                                     for (size_t cc = c; cc < std::min(C, c + TILE_SIZE); cc++) {
                                         T a_val = *(iter_start + rr * C + cc);
                                         T b_val = *(iter_B_start + cc * B.W + pp);
-                                        sum += a_val.to_float() * b_val.to_float();
+                                        sum += static_cast<float>(a_val) * static_cast<float>(b_val);
                                     }
                                     output_tile[(rr - r) * TILE_SIZE + pp - p] += sum;
                                 }

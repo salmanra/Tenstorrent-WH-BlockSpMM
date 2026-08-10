@@ -11,6 +11,7 @@
 #include "hostdevcommon/profiler_common.h"
 
 #include <cstdlib>
+#include <fstream>
 
 using namespace tt::constants;
 using namespace std;
@@ -76,7 +77,7 @@ void export_to_csv(int host_code_num, int test_num, ProfileCaseFunctionPtr *Regi
     uint32_t Ct = a.C / TILE_WIDTH;
 
     tt::DataFormat indexing_data_format = tt::DataFormat::Int32;
-    uint32_t indexing_tile_size = detail::TileSize(indexing_data_format);
+    uint32_t indexing_tile_size = tt::tile_size(indexing_data_format);
     uint32_t indptr_buf_size = sizeof(int) * a.indptr.size();
     indptr_buf_size = indexing_tile_size * ((indexing_tile_size - 1 + indptr_buf_size) / indexing_tile_size);
     uint32_t col_idx_buf_size = sizeof(int) * a.indices.size();

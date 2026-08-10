@@ -1,11 +1,13 @@
 #include <stdint.h>
 #include <cstdint>
-#include "dataflow_api.h"
+#include "api/dataflow/dataflow_api.h"
 #include "hostdevcommon/kernel_structs.h"
+#include "api/debug/dprint.h"
 #include <tools/profiler/kernel_profiler.hpp>
 #include "tt_metal/programming_examples/Tenstorrent-WH-BlockSpMM/block_spmm/kernels/common/spmm_reader_common.hpp"
 #include "tt_metal/programming_examples/Tenstorrent-WH-BlockSpMM/block_spmm/kernels/common/spmm_tile_ops.hpp"
 #include "tt_metal/programming_examples/Tenstorrent-WH-BlockSpMM/block_spmm/kernels/common/spmm_indexing.hpp"
+#include "tt_metal/programming_examples/Tenstorrent-WH-BlockSpMM/block_spmm/kernels/common/spmm_heartbeat.hpp"
 
 // Ablation skip flags (set to 1 via CreateKernel defines to skip that phase)
 #ifndef SKIP_IN1_DRAM_READ
@@ -16,6 +18,8 @@
 #endif
 
 void kernel_main(){
+    BSPMM_HB_WP("N1S");
+    BSPMM_HB_DATA("in1 naive start");
     ///////////////////////////////////////////////////////////////////////
     /// COMPILETIME ARGS //////////////////////////////////////////////////
     ///////////////////////////////////////////////////////////////////////
@@ -111,6 +115,7 @@ void kernel_main(){
     uint32_t out_tensor_x_coord_offset = 0;
     uint32_t output_idx_y, output_idx_x;
     for (uint32_t iter_y = 0; iter_y < num_iters_y; iter_y++){
+        BSPMM_HB_DATA("in1 naive iter_y={} num_iters_x={}", iter_y, num_iters_x);
         // Get y_coord for this iter
         output_idx_y = y_coords[iter_y];
         uint32_t block_row_start = indptr[output_idx_y];
@@ -130,7 +135,7 @@ void kernel_main(){
                     // Read in1 block (row selected by BSR col_indices)
                     uint32_t bsr_col_index = col_indices[reduction_iter];
                     uint32_t in1_block_stride = in1_block_h * in1_tensor_stride_h;
-                    DPRINT_DATA0(DPRINT << "in1 DRAM read: " << bsr_col_index << ENDL());
+                    DPRINT_DATA0("in1 DRAM read: {}", bsr_col_index);
 
                     spmm::read_block_by_tile(
                         in1_tensor_start_tile_id + bsr_col_index * in1_block_stride,
@@ -148,7 +153,11 @@ void kernel_main(){
                 uint32_t out_block_num_tiles = in0_block_h * in1_block_w;
                 uint32_t out_tensor_sbh_start_tile_id = out_tensor_start_tile_id + out_tensor_y_coord_offset + out_tensor_x_coord_offset;
 
+                BSPMM_HB_WP("N1OW");
+                BSPMM_HB_DATA("in1 naive wait out iter_y={} iter_x={}", iter_y, iter_x);
                 cb_wait_front(spmm::cb_id_out, out_block_num_tiles);
+                BSPMM_HB_WP("N1OD");
+                BSPMM_HB_DATA("in1 naive out ready iter_y={} iter_x={}", iter_y, iter_x);
                 {
                     DeviceZoneScopedN("SpMM Zone: Writing Block back to DRAM");
                     uint32_t l1_read_addr = get_read_ptr(spmm::cb_id_out);
@@ -174,6 +183,8 @@ void kernel_main(){
         }
         out_tensor_x_coord_offset = 0;
     }
-    DPRINT_DATA1(DPRINT << "in1 kernel complete" << ENDL());
+    DPRINT_DATA1("in1 kernel complete");
+    BSPMM_HB_WP("N1D");
+    BSPMM_HB_DATA("in1 naive done");
 
 }

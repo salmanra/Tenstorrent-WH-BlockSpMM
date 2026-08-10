@@ -15,29 +15,17 @@ cmake_minimum_required(VERSION 3.22...3.30)
 # Output binaries land at:  build/programming_examples/block_sparse/
 # ─────────────────────────────────────────────────────────────────────────────
 
-# sparse_common must come first: block_sddmm/block_spmm host_code libs link it.
+add_compile_options(-Wno-unused-variable -Wno-unused-but-set-variable -Wno-unused-parameter -Wno-reorder-ctor)
+
 add_subdirectory(sparse_common)
 add_subdirectory(block_spmm/inc/host_code)
-add_subdirectory(block_sddmm)
 
-# Entry-point sources always built
 set(BLKSPMM_SRCS
-    ${CMAKE_CURRENT_SOURCE_DIR}/block_spmm/src/run_block_spmm.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/block_spmm/src/test_block_spmm.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/block_spmm/src/profile_block_spmm.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/block_spmm/src/export_block_spmm_to_csv.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/block_sddmm/src/run_sddmm.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/block_sddmm/src/test_sddmm.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/block_sddmm/src/export_sddmm.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/block_spmm/src/mtx_spmm.cpp
 )
-
-if(ENABLE_TRACY)
-    list(
-        APPEND
-        BLKSPMM_SRCS
-        ${CMAKE_CURRENT_SOURCE_DIR}/block_spmm/src/profile_block_spmm.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/block_sddmm/src/profile_sddmm.cpp
-    )
-endif()
 
 CREATE_PGM_EXAMPLES_EXE("${BLKSPMM_SRCS}" "block_sparse")
 
@@ -46,7 +34,6 @@ foreach(target ${PROGRAMMING_EXAMPLES_TEST_TARGETS})
         target_link_libraries(
             ${target}
             PRIVATE
-                sddmm_host_code
                 block_sparse_spmm_host_code
                 sparse_common
         )

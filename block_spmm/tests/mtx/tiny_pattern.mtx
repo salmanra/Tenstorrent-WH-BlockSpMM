@@ -1,0 +1,5 @@
+%%MatrixMarket matrix coordinate pattern symmetric
+% 2x2 pattern symmetric fixture; entries carry implicit value 1.0.
+2 2 2
+1 1
+2 1

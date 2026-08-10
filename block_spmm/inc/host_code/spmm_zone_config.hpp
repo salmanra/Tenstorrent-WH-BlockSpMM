@@ -25,6 +25,9 @@ inline std::map<std::string, std::string> get_zone_defines() {
             defines[name] = "0";
         }
     }
+    if (const char* heartbeat = std::getenv("BSPMM_HEARTBEAT"); heartbeat && std::string(heartbeat) != "0") {
+        defines["BSPMM_HEARTBEAT"] = "1";
+    }
     return defines;
 }
 

@@ -1,5 +1,7 @@
 // SNF for in0 (store-and-forward along core columns) + CDA for in1 (chain of direct addressing along core rows)
 
+#include <cstring>
+
 #include "../host_code.hpp"
 #include "spmm_zone_config.hpp"
 
@@ -22,15 +24,14 @@ void bsr_spmm_multicore_snfin0_cdain1_impl(
     IDevice* device,
     const std::map<std::string, std::string>& extra_defines = {}){
 
-    CommandQueue& cq = device->command_queue();
     Program program{};
 
     tt::DataFormat cb_data_format = tt::DataFormat::Float16_b;
     MathFidelity math_fidelity = MathFidelity::HiFi4;
-    uint32_t single_tile_size = detail::TileSize(cb_data_format);
+    uint32_t single_tile_size = tt::tile_size(cb_data_format);
 
     tt::DataFormat indexing_data_format = tt::DataFormat::Int32;
-    uint32_t indexing_data_single_tile_size = detail::TileSize(indexing_data_format);
+    uint32_t indexing_data_single_tile_size = tt::tile_size(indexing_data_format);
     uint32_t dram_buffer_indptr_size =
         sizeof(int) * a.indptr.size();
     // Round up to tile size
@@ -175,12 +176,15 @@ void bsr_spmm_multicore_snfin0_cdain1_impl(
         log_info(tt::LogVerif, "in0 receiver cores {}, used? {}", in0_receiver_cores, num_cores_c > 1);
     }
 
-    auto in0_sender_semaphore_id = tt::tt_metal::CreateSemaphore(program, all_cores, INVALID);
-    auto in0_receiver_semaphore_id = tt::tt_metal::CreateSemaphore(program, all_cores, INVALID);
-    auto in1_sender_semaphore_id = tt::tt_metal::CreateSemaphore(program, all_cores, INVALID);
-    auto in1_receiver_semaphore_id = tt::tt_metal::CreateSemaphore(program, all_cores, INVALID);
-    auto in1_barrier_semaphore_id = tt::tt_metal::CreateSemaphore(program, all_cores, INVALID);
-    auto in1_release_semaphore_id = tt::tt_metal::CreateSemaphore(program, all_cores, INVALID);
+    // Host-initialize chain semaphores to 0: with INVALID the kernels zero them at start,
+    // and a neighbor's semaphore_inc can land before that store executes and be wiped
+    // (lost wakeup, both cores block). Happens deterministically under BH slow dispatch.
+    auto in0_sender_semaphore_id = tt::tt_metal::CreateSemaphore(program, all_cores, 0);
+    auto in0_receiver_semaphore_id = tt::tt_metal::CreateSemaphore(program, all_cores, 0);
+    auto in1_sender_semaphore_id = tt::tt_metal::CreateSemaphore(program, all_cores, 0);
+    auto in1_receiver_semaphore_id = tt::tt_metal::CreateSemaphore(program, all_cores, 0);
+    auto in1_barrier_semaphore_id = tt::tt_metal::CreateSemaphore(program, all_cores, 0);
+    auto in1_release_semaphore_id = tt::tt_metal::CreateSemaphore(program, all_cores, 0);
 
     // Circular Buffer sizing
     uint32_t in0_CB_num_tiles = in0_block_h * in0_block_w * 2; // double buffer
@@ -215,8 +219,12 @@ void bsr_spmm_multicore_snfin0_cdain1_impl(
     uint32_t src1_block_size = in1_block_w * in0_block_w * single_tile_size;
 
     auto dst_dram_buffer = MakeBuffer(device, dram_buffer_dst_total_size, single_tile_size);
-    auto src0_dram_buffer = MakeBuffer(device, dram_buffer_A_size, src0_block_size); // TODO: will this let the D2Inj performance easaier to reason about?
-    auto src1_dram_buffer = MakeBuffer(device, dram_buffer_B_size, src1_block_size);
+    // Page size must stay single_tile_size: the kernel addrgens address tiles with the
+    // CB-derived 2048-byte page stride, and the interleaved allocator maps pages to banks
+    // round-robin. A block-sized page packs multiple tiles per bank and scrambles the
+    // tile->bank mapping (reads return wrong tiles / stale DRAM).
+    auto src0_dram_buffer = MakeBuffer(device, dram_buffer_A_size, single_tile_size);
+    auto src1_dram_buffer = MakeBuffer(device, dram_buffer_B_size, single_tile_size);
     auto column_indices_dram_buffer = MakeBuffer(device, dram_buffer_col_indices_size, indexing_data_single_tile_size);
     auto indptr_dram_buffer = MakeBuffer(device, dram_buffer_indptr_size, indexing_data_single_tile_size);
 
@@ -631,7 +639,7 @@ void bsr_spmm_multicore_snfin0_cdain1_impl(
             std::vector<uint32_t> in1_reader_runtime_args;
 
             uint32_t num_iters_y_this_core = output_y_indices[core_idx_y].size();
-            uint32_t num_iters_x_this_core = std::min(num_iters_x, num_blocks_x - output_idx_x_start + 1);
+            uint32_t num_iters_x_this_core = std::min(num_iters_x, num_blocks_x - output_idx_x_start);
 
             if constexpr (verbose) {
                 log_info(tt::LogVerif, " -- Core ({},{}) iter assignment: num_iters_x={}, num_iters_y={}, output_idx_x_start={} --",
@@ -670,6 +678,7 @@ void bsr_spmm_multicore_snfin0_cdain1_impl(
             // }
 
             // ── compute runtime args ──
+            compute_runtime_args.push_back(num_iters_x_this_core);
             compute_runtime_args.push_back(num_iters_y_this_core);
 
             // ── Per-iter_y y_coords and folded_y_coords ──
@@ -746,6 +755,7 @@ void bsr_spmm_multicore_snfin0_cdain1_impl(
                 }
             }
 
+
             // if constexpr (verbose) {
             //     log_info(tt::LogVerif, " -- Core ({},{}) CDA column-wide schedule --", core_idx_x, core_idx_y);
             //     log_info(tt::LogVerif, "   all_num_iters_y:");
@@ -799,31 +809,35 @@ void bsr_spmm_multicore_snfin0_cdain1_impl(
     std::vector<uint32_t> padded_indptr(dram_buffer_indptr_size / sizeof(uint32_t), 0);
     std::copy(a.indptr.begin(), a.indptr.end(), padded_indptr.begin());
 
-    EnqueueWriteBuffer(cq, src0_dram_buffer, a.data.data(), false);
-    EnqueueWriteBuffer(cq, src1_dram_buffer, b.data.data(), false);
-    EnqueueWriteBuffer(cq, column_indices_dram_buffer, padded_col_indices.data(), false);
-    EnqueueWriteBuffer(cq, indptr_dram_buffer, padded_indptr.data(), true);
+    bspmm_compat::write_buffer_blocking(src0_dram_buffer, a.data.data());
+    bspmm_compat::write_buffer_blocking(src1_dram_buffer, b.data.data());
+    bspmm_compat::write_buffer_blocking(column_indices_dram_buffer, padded_col_indices.data());
+    bspmm_compat::write_buffer_blocking(indptr_dram_buffer, padded_indptr.data());
 
     if constexpr (is_profiling){
         int num_iters = 10;
-        EnqueueProgram(cq, program, true);
+        bspmm_compat::launch_program_blocking(device, program);
         ZoneScopedNC("Device program Loop", tracy::Color::Aquamarine);
         for (int i = 0; i < num_iters; i++){
-            EnqueueProgram(cq, program, true);
+            bspmm_compat::launch_program_blocking(device, program);
         }
     }
     else if constexpr (verbose){
         log_info(tt::LogVerif, " -- Entering Program --");
-        EnqueueProgram(cq, program, true);
+        bspmm_compat::launch_program_blocking(device, program);
     }
     else {
-        EnqueueProgram(cq, program, false);
+        bspmm_compat::launch_program_blocking(device, program);
     }
 
     if constexpr (verbose)
         log_info(tt::LogVerif, " -- Program returned --");
 
     if constexpr (!is_profiling){
+        // Regioned reads of interleaved DRAM are broken under slow dispatch (see bspmm_compat),
+        // so stage the packed output buffer and slice per nonzero row.
+        std::vector<bfloat16> dst_packed(dram_buffer_dst_total_size / sizeof(bfloat16));
+        bspmm_compat::read_buffer_blocking(dst_dram_buffer, dst_packed.data());
         uint32_t nonzero_row_index = 0;
         for (size_t row_index = 0; row_index < a.indptr.size() - 1; row_index++) {
             if (a.indptr[row_index+1] - a.indptr[row_index] == 0)
@@ -831,13 +845,14 @@ void bsr_spmm_multicore_snfin0_cdain1_impl(
             if constexpr (verbose) {
                 log_info(tt::LogVerif, "Reading output row {} from device", row_index);
             }
-            BufferRegion DRAM_row(nonzero_row_index * dram_buffer_dst_row_size, dram_buffer_dst_row_size);
-            EnqueueReadSubBuffer(cq, dst_dram_buffer, output.data.data() + (row_index * R * N), DRAM_row, true);
+            std::memcpy(
+                output.data.data() + row_index * R * N,
+                dst_packed.data() + nonzero_row_index * R * N,
+                dram_buffer_dst_row_size);
             nonzero_row_index++;
         }
     }
 
-    Finish(cq);
     if constexpr (verbose)
         log_info(tt::LogVerif, " -- Finished reading output --");
 }

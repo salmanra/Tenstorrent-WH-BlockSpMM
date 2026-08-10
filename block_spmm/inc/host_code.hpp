@@ -6,7 +6,7 @@
 
 #include "include_me.hpp"
 #include "host_code_utils.hpp"
-#include "tt-metalium/assert.hpp"
+#include <tt_stl/assert.hpp>
 #include "tt-metalium/bfloat16.hpp"
 #include "tt-metalium/core_coord.hpp"
 #include "tt-metalium/host_api.hpp"
@@ -237,7 +237,7 @@ void sortingPermutation(const Vals& values, std::vector<int>& v){
 // Utility declarations used by host code implementations
 CoreCoord clamped_prev(const std::vector<CoreCoord>& order, uint32_t index);
 CoreCoord clamped_next(const std::vector<CoreCoord>& order, uint32_t index);
-uint32_t _get_maximum_block_dim_with_NoC_args(int32_t block_dim, int32_t in0_block_w, int32_t num_tiles_in_NoC_args);
-uint32_t get_Npc_from_BSR_block_size(uint32_t Nt, uint32_t Mpc, uint32_t in0_block_w, uint32_t num_cores_x, uint32_t num_cores_y, uint32_t num_tiles_for_indexing, uint32_t nnz_rows);
+uint32_t _get_maximum_block_dim_with_NoC_args(int32_t block_dim, int32_t in0_block_w, int32_t num_tiles_in_NoC_args, int32_t interm_tile_bytes = 2048);
+uint32_t get_Npc_from_BSR_block_size(uint32_t Nt, uint32_t Mpc, uint32_t in0_block_w, uint32_t num_cores_x, uint32_t num_cores_y, uint32_t num_tiles_for_indexing, uint32_t nnz_rows, uint32_t interm_tile_bytes = 2048);
 
 } // namespace bsr_host_code

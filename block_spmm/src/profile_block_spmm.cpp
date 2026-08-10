@@ -126,8 +126,7 @@ void profile_test(
         dense_matrix<bfloat16>& b,
         std::string& test_name,
         int num_iters) {
-    constexpr int device_id = 0;
-    IDevice* device = CreateDevice(device_id);
+    IDevice* device = bspmm_compat::create_blackhole_device_slow_dispatch();
     std::cout << "Checking for tracy profiler connection to device" << std::endl;
     while (!tracy::GetProfiler().IsConnected()) {
         std::cout << "Waiting for tracy profiler to connect to device" << std::endl;
@@ -150,5 +149,5 @@ void profile_test(
     }
 
     tt_metal::detail::ReadDeviceProfilerResults(device);
-    CloseDevice(device);
+    bspmm_compat::close_device_slow_dispatch(device);
 }

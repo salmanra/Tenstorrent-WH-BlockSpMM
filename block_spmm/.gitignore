@@ -1,0 +1,4 @@
+data/
+# Device-run debug dumps (emit_output) and Metalium inspector logs
+test_*/
+generated/

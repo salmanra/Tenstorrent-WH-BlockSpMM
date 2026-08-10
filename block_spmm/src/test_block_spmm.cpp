@@ -1,5 +1,6 @@
 
 #include <cstdio>
+#include <fstream>
 #include <string>
 #include "../inc/include_me.hpp"
 #include "../inc/test_suite.hpp"
@@ -21,17 +22,19 @@ using namespace profiling_suite;
 #define RED_TXT "196"
 #define RESET "\033[m"
 
-// Print to the *original* console, regardless of where stdout is redirected
 void console_printf(const char* fmt, ...) {
-    static int console_fd = -1;
-    if (console_fd == -1) {
+    static int console_fd = -2;
+    if (console_fd == -2) {
         console_fd = ::open("/dev/tty", O_WRONLY | O_CLOEXEC);
     }
-    if (console_fd == -1) return;
 
     va_list ap;
     va_start(ap, fmt);
-    ::vdprintf(console_fd, fmt, ap);
+    if (console_fd >= 0) {
+        ::vdprintf(console_fd, fmt, ap);
+    } else {
+        std::vfprintf(stdout, fmt, ap);
+    }
     va_end(ap);
 }
 
@@ -48,8 +51,13 @@ TestResult run_test(
     std::string& test_name,
     bool emit_output = false) {
 
-    constexpr int device_id = 0;
-    IDevice* device = CreateDevice(device_id);
+    const tt::ChipId device_id = bspmm_compat::select_blackhole_device_id();
+    IDevice* device = bspmm_compat::create_blackhole_device_slow_dispatch();
+    TT_FATAL(
+        device->arch() == tt::ARCH::BLACKHOLE,
+        "BlockSpMM bring-up requires a Blackhole device; selected device {} has arch {}",
+        device_id,
+        static_cast<int>(device->arch()));
 
     // matmul params setup
     uint32_t M = a.H;
@@ -71,11 +79,14 @@ TestResult run_test(
     a.pretty_print();
 
     // run sequential spmm
+    log_info(tt::LogVerif, "Computing host golden SpMM (M={} N={} K={} blocks={})", M, N, K, nblocks);
     dense_matrix<bfloat16> golden = a.omp_spmm_bf16(b);
+    log_info(tt::LogVerif, "Host golden SpMM complete");
 
     // tilize input data
     a.data = tilize_nfaces(a.data, R, C);
     b.data = tilize_nfaces(b.data, K, N);
+    log_info(tt::LogVerif, "Input tilization complete");
 
     host_func(a, b, output, false, nblocks, M, N, K, R, C, 1, device);
 
@@ -94,7 +105,7 @@ TestResult run_test(
             TT_THROW("Failed to open output file: {}", output_file);
         }
         for (size_t i = 0; i < output.data.size(); i++) {
-            out << output.data[i].to_float() << "\n";
+            out << output.data[i] << "\n";
         }
         out.close();
 
@@ -107,7 +118,7 @@ TestResult run_test(
 
         golden.data = tilize_nfaces(golden.data, M, N);
         for (size_t i = 0; i < golden.data.size(); i++) {
-            golden_out << golden.data[i].to_float() << "\n";
+            golden_out << golden.data[i] << "\n";
         }
         golden.data = untilize_nfaces(golden.data, M, N);
         golden_out.close();
@@ -118,7 +129,7 @@ TestResult run_test(
             TT_THROW("Failed to open bsr file: {}", bsr_file);
         }
         for (size_t i = 0; i < a.data.size(); i++) {
-            bsr_out << a.data[i].to_float() << "\n";
+            bsr_out << a.data[i] << "\n";
         }
         bsr_out.close();
 
@@ -128,7 +139,7 @@ TestResult run_test(
             TT_THROW("Failed to open dense file: {}", dense_file);
         }
         for (size_t i = 0; i < a.data.size(); i++) {
-            dense_out << b.data[i].to_float() << "\n";
+            dense_out << b.data[i] << "\n";
         }
         dense_out.close();
     }
@@ -140,7 +151,7 @@ TestResult run_test(
 
     bool all_close = golden.all_close_bfloat16(output);
 
-    CloseDevice(device);
+    bspmm_compat::close_device_slow_dispatch(device);
 
     return TestResult{test_name, pearson, all_close};
 }
@@ -305,6 +316,38 @@ int main(int argc, char** argv) {
     if (argc > 1) {
         test_all = std::string(argv[1]) == "all";
     }
+
+    // TEMP: host<->DRAM interleaved loopback over the same staged read path as the SpMM readback
+    if (argc > 1 && std::string(argv[1]) == "loopback") {
+        IDevice* device = bspmm_compat::create_blackhole_device_slow_dispatch();
+        int rc = 0;
+        for (uint32_t buf_size : {8u * 1024 * 1024, 32u * 1024 * 1024, 128u * 1024 * 1024}) {
+            InterleavedBufferConfig config{
+                .device = device, .size = buf_size, .page_size = 2048, .buffer_type = BufferType::DRAM};
+            auto buf = CreateBuffer(config);
+            std::vector<uint32_t> src(buf_size / 4), dst(buf_size / 4, 0);
+            for (size_t i = 0; i < src.size(); i++) {
+                src[i] = (uint32_t)i;
+            }
+            bspmm_compat::write_buffer_blocking(buf, src.data());
+            bspmm_compat::read_buffer_blocking(buf, dst.data());
+            uint64_t bad = 0;
+            for (size_t i = 0; i < src.size(); i++) {
+                if (src[i] != dst[i]) {
+                    if (bad < 12) {
+                        console_printf(
+                            "MISMATCH word=%zu tile=%zu byte_in_tile=%zu exp=%08x got=%08x\n",
+                            i, (i * 4) / 2048, (i * 4) % 2048, src[i], dst[i]);
+                    }
+                    bad++;
+                }
+            }
+            console_printf("loopback size=%u MB: %llu bad words of %zu\n", buf_size >> 20, (unsigned long long)bad, src.size());
+            rc |= bad != 0;
+        }
+        bspmm_compat::close_device_slow_dispatch(device);
+        return rc;
+    }
     if (argc > 2) {
         host_code_index = std::stoi(argv[2]);
     }
@@ -325,22 +368,26 @@ int main(int argc, char** argv) {
     auto [host_func, host_func_name] = HostCodeRegistryVerbose[host_code_index];
 
     if (test_all) {
-        int saved_stdout = ::dup(STDOUT_FILENO);
-        if (saved_stdout == -1) {
-            std::perror("dup");
-            return 1;
-        }
+        int tty_fd = ::open("/dev/tty", O_WRONLY | O_CLOEXEC);
+        if (tty_fd >= 0) {
+            ::close(tty_fd);
+            int saved_stdout = ::dup(STDOUT_FILENO);
+            if (saved_stdout == -1) {
+                std::perror("dup");
+                return 1;
+            }
 
-        int log_fd = ::open("std.out.log", O_CREAT | O_WRONLY | O_TRUNC, 0644);
-        if (log_fd == -1) {
-            std::perror("open");
-            return 1;
+            int log_fd = ::open("std.out.log", O_CREAT | O_WRONLY | O_TRUNC, 0644);
+            if (log_fd == -1) {
+                std::perror("open");
+                return 1;
+            }
+            if (::dup2(log_fd, STDOUT_FILENO) == -1) {
+                std::perror("dup2");
+                return 1;
+            }
+            ::close(log_fd);
         }
-        if (::dup2(log_fd, STDOUT_FILENO) == -1) {
-            std::perror("dup2");
-            return 1;
-        }
-        ::close(log_fd);
 
         test_suite(host_func, host_func_name, registry, num_tests);
     }

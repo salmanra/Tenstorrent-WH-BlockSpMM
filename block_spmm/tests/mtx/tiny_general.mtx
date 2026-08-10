@@ -1,0 +1,8 @@
+%%MatrixMarket matrix coordinate real general
+% 3x3 general fixture; the (1,1) entry is duplicated on purpose (values must sum).
+3 3 5
+1 1 2.0
+1 3 -1.5
+3 2 4.0
+2 1 1.0
+1 1 0.5
