@@ -17,6 +17,10 @@ cmake_minimum_required(VERSION 3.22...3.30)
 
 add_compile_options(-Wno-unused-variable -Wno-unused-but-set-variable -Wno-unused-parameter -Wno-reorder-ctor)
 
+if(NOT TARGET tiny_bsr_spmm_host)
+    add_subdirectory(tiny_bsr_spmm)
+endif()
+
 add_subdirectory(sparse_common)
 add_subdirectory(block_spmm/inc/host_code)
 
